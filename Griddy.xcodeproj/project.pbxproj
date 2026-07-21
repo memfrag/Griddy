@@ -1,0 +1,727 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0FD829D4A67C863E77866CBB /* TextToolbox in Frameworks */ = {isa = PBXBuildFile; productRef = 4893DC66F197015E262BA370 /* TextToolbox */; };
+		17A8291BC1374C60D087AA21 /* URLToolbox in Frameworks */ = {isa = PBXBuildFile; productRef = 4E2A769588F862FD97EAF224 /* URLToolbox */; };
+		19A3565E43BB10DBB9E07917 /* MessagePackKit in Frameworks */ = {isa = PBXBuildFile; productRef = EF6FC189437C6F53B124496F /* MessagePackKit */; };
+		2D1BCE8CB3EE6958DF1DD9C6 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = D18ECF6ED710C7E868F790A8 /* MarkdownUI */; };
+		5AE7845B52D1FDD2EE117177 /* CollectionKit in Frameworks */ = {isa = PBXBuildFile; productRef = CA35C293C467EF20933797F4 /* CollectionKit */; };
+		61A1789390EBF8664706FD05 /* AttributionsUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5AA6C987B8484B7DA08C99E8 /* AttributionsUI */; };
+		666C0F2DEC43DF392AEC7F95 /* SensibleStyling in Frameworks */ = {isa = PBXBuildFile; productRef = 784145F3E95BDA1896DF5068 /* SensibleStyling */; };
+		6823A90DB8EA1F82AB1C9670 /* SettingsUI in Frameworks */ = {isa = PBXBuildFile; productRef = F9D43E9464806C8FD7162D0B /* SettingsUI */; };
+		6A8D2C75D79F639366CD8216 /* MathKit in Frameworks */ = {isa = PBXBuildFile; productRef = 5D4A7FC61AE42FDB69BCB2C3 /* MathKit */; };
+		7B8C3B8F256142FF399A9C36 /* SystemKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3371F8078F5618E8F6D26E8D /* SystemKit */; };
+		7F4B17BB165832C0F9D29FE1 /* SwiftUIToolbox in Frameworks */ = {isa = PBXBuildFile; productRef = 0A2BBBFE04F59F1FA891CD54 /* SwiftUIToolbox */; };
+		862F768EFC21BCD39C5BFCAA /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = BF12F2CC97B0FE7E820D7A45 /* Sparkle */; };
+		9887396D15EBE4DAF4DE9082 /* AppDesign in Frameworks */ = {isa = PBXBuildFile; productRef = 449E9A962BF8A8EF27DC38F3 /* AppDesign */; };
+		9C135C30241B6A4CCF5A8750 /* Markin in Frameworks */ = {isa = PBXBuildFile; productRef = F65E0A67D3DE60BE90C7C3A6 /* Markin */; };
+		9E55E4F377B72069D8CF6869 /* KeyValueStore in Frameworks */ = {isa = PBXBuildFile; productRef = 69732D5521AAAC757D7C9E3B /* KeyValueStore */; };
+		A200178B91A36DAEA4A5755B /* UserDefaultsUI in Frameworks */ = {isa = PBXBuildFile; productRef = BFE2721086C1B0A122C420D9 /* UserDefaultsUI */; };
+		BA4EDA36FB64C634B8CA0614 /* Zipcode in Frameworks */ = {isa = PBXBuildFile; productRef = D0AA19F1D4E0CA25786EA800 /* Zipcode */; };
+		C4A6E1B0A4D39E0B17567B31 /* BinaryDataKit in Frameworks */ = {isa = PBXBuildFile; productRef = A8A8B6F09EC7ED50DB9D621D /* BinaryDataKit */; };
+		CED21CBE24978C6C8D7B41DE /* Constructs in Frameworks */ = {isa = PBXBuildFile; productRef = FA65D964696348B2D10D5245 /* Constructs */; };
+		F4BE8BFA73C8C9E9476CDC11 /* CGMath in Frameworks */ = {isa = PBXBuildFile; productRef = 3CE8FB12BA3F21470690C5E0 /* CGMath */; };
+		F9E538649CD2EE38ACAC7BDA /* AppRouting in Frameworks */ = {isa = PBXBuildFile; productRef = CE4242269FB886B0D13CDC14 /* AppRouting */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B8DF9ADE3D7DEADB833DD957 /* Griddy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Griddy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FEB4625E57EF19464E135A0C /* AppDesign */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AppDesign; path = Packages/AppDesign; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		3E5A6D7E48F3592106B70F8A /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Preview Content/Preview Assets.xcassets/Contents.json",
+				macOS/Info.plist,
+			);
+			target = 6F9F7FCAA5B141C4F16FACFB /* Griddy */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		D701F6FF31C00F5986A69EA0 /* Griddy */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3E5A6D7E48F3592106B70F8A /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Griddy;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		355ED93DBF83D4369250FD84 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9887396D15EBE4DAF4DE9082 /* AppDesign in Frameworks */,
+				862F768EFC21BCD39C5BFCAA /* Sparkle in Frameworks */,
+				F9E538649CD2EE38ACAC7BDA /* AppRouting in Frameworks */,
+				61A1789390EBF8664706FD05 /* AttributionsUI in Frameworks */,
+				C4A6E1B0A4D39E0B17567B31 /* BinaryDataKit in Frameworks */,
+				F4BE8BFA73C8C9E9476CDC11 /* CGMath in Frameworks */,
+				5AE7845B52D1FDD2EE117177 /* CollectionKit in Frameworks */,
+				CED21CBE24978C6C8D7B41DE /* Constructs in Frameworks */,
+				9E55E4F377B72069D8CF6869 /* KeyValueStore in Frameworks */,
+				2D1BCE8CB3EE6958DF1DD9C6 /* MarkdownUI in Frameworks */,
+				9C135C30241B6A4CCF5A8750 /* Markin in Frameworks */,
+				6A8D2C75D79F639366CD8216 /* MathKit in Frameworks */,
+				19A3565E43BB10DBB9E07917 /* MessagePackKit in Frameworks */,
+				666C0F2DEC43DF392AEC7F95 /* SensibleStyling in Frameworks */,
+				6823A90DB8EA1F82AB1C9670 /* SettingsUI in Frameworks */,
+				7F4B17BB165832C0F9D29FE1 /* SwiftUIToolbox in Frameworks */,
+				7B8C3B8F256142FF399A9C36 /* SystemKit in Frameworks */,
+				0FD829D4A67C863E77866CBB /* TextToolbox in Frameworks */,
+				17A8291BC1374C60D087AA21 /* URLToolbox in Frameworks */,
+				A200178B91A36DAEA4A5755B /* UserDefaultsUI in Frameworks */,
+				BA4EDA36FB64C634B8CA0614 /* Zipcode in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1C4EA8E2CC860FE8CBB0E374 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				FEB4625E57EF19464E135A0C /* AppDesign */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		20FC0935563736AFA6D6D467 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B8DF9ADE3D7DEADB833DD957 /* Griddy.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		2AAE2971AE23C71106964D1F = {
+			isa = PBXGroup;
+			children = (
+				D701F6FF31C00F5986A69EA0 /* Griddy */,
+				1C4EA8E2CC860FE8CBB0E374 /* Packages */,
+				20FC0935563736AFA6D6D467 /* Products */,
+			);
+			indentWidth = 4;
+			sourceTree = "<group>";
+			tabWidth = 4;
+			usesTabs = 0;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		6F9F7FCAA5B141C4F16FACFB /* Griddy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 81A17773C630D156016EB299 /* Build configuration list for PBXNativeTarget "Griddy" */;
+			buildPhases = (
+				3A211C6B988F6D45C88275AF /* Sources */,
+				8CCF45C697EC34063E0A6D31 /* Resources */,
+				355ED93DBF83D4369250FD84 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D701F6FF31C00F5986A69EA0 /* Griddy */,
+			);
+			name = Griddy;
+			packageProductDependencies = (
+				449E9A962BF8A8EF27DC38F3 /* AppDesign */,
+				BF12F2CC97B0FE7E820D7A45 /* Sparkle */,
+				CE4242269FB886B0D13CDC14 /* AppRouting */,
+				5AA6C987B8484B7DA08C99E8 /* AttributionsUI */,
+				A8A8B6F09EC7ED50DB9D621D /* BinaryDataKit */,
+				3CE8FB12BA3F21470690C5E0 /* CGMath */,
+				CA35C293C467EF20933797F4 /* CollectionKit */,
+				FA65D964696348B2D10D5245 /* Constructs */,
+				69732D5521AAAC757D7C9E3B /* KeyValueStore */,
+				D18ECF6ED710C7E868F790A8 /* MarkdownUI */,
+				F65E0A67D3DE60BE90C7C3A6 /* Markin */,
+				5D4A7FC61AE42FDB69BCB2C3 /* MathKit */,
+				EF6FC189437C6F53B124496F /* MessagePackKit */,
+				784145F3E95BDA1896DF5068 /* SensibleStyling */,
+				F9D43E9464806C8FD7162D0B /* SettingsUI */,
+				0A2BBBFE04F59F1FA891CD54 /* SwiftUIToolbox */,
+				3371F8078F5618E8F6D26E8D /* SystemKit */,
+				4893DC66F197015E262BA370 /* TextToolbox */,
+				4E2A769588F862FD97EAF224 /* URLToolbox */,
+				BFE2721086C1B0A122C420D9 /* UserDefaultsUI */,
+				D0AA19F1D4E0CA25786EA800 /* Zipcode */,
+			);
+			productName = Griddy;
+			productReference = B8DF9ADE3D7DEADB833DD957 /* Griddy.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A9F59B12A47B57632F4B843F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				ORGANIZATIONNAME = "Martin Johannesson";
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = B240BDD61A29BC0F5C63D032 /* Build configuration list for PBXProject "Griddy" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 2AAE2971AE23C71106964D1F;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				16668644CE00D4B41221E612 /* XCRemoteSwiftPackageReference "AppRouting" */,
+				62B3C65BE5E68CA3AB0B17BC /* XCRemoteSwiftPackageReference "AttributionsUI" */,
+				8E4F898ABFCC4E72D7EACD49 /* XCRemoteSwiftPackageReference "BinaryDataKit" */,
+				3F307791B4EE35784EF7384D /* XCRemoteSwiftPackageReference "CGMath" */,
+				FD7C36C56770F4DA6AD31C28 /* XCRemoteSwiftPackageReference "CollectionKit" */,
+				3DC7AA8FE3144B389C27C07C /* XCRemoteSwiftPackageReference "Constructs" */,
+				B79086FEB46515E4C7952644 /* XCRemoteSwiftPackageReference "KeyValueStore" */,
+				9865CCABD14A2E3AF4065584 /* XCRemoteSwiftPackageReference "MarkdownUI" */,
+				32A20DD3976CDC290245E557 /* XCRemoteSwiftPackageReference "Markin" */,
+				31FCE31675732815CD3F595C /* XCRemoteSwiftPackageReference "MathKit" */,
+				518077CF5ECAB0F63AF718ED /* XCRemoteSwiftPackageReference "MessagePackKit" */,
+				641A9F90755B7EBA9476A32F /* XCRemoteSwiftPackageReference "SensibleStyling" */,
+				46A4ABBB72928501AB7B4E3E /* XCRemoteSwiftPackageReference "SettingsUI" */,
+				16AC712E8E639CD6410F61BB /* XCRemoteSwiftPackageReference "Sparkle" */,
+				414C2F0BB9C32E7D64046E63 /* XCRemoteSwiftPackageReference "SwiftUIToolbox" */,
+				13F4E40EF19035937969323F /* XCRemoteSwiftPackageReference "SystemKit" */,
+				97EB254A5A263E2B64E8B37E /* XCRemoteSwiftPackageReference "TextToolbox" */,
+				D2ED770386265DADF9029E0E /* XCRemoteSwiftPackageReference "URLToolbox" */,
+				F9879F3ED30146807B13BC0D /* XCRemoteSwiftPackageReference "UserDefaultsUI" */,
+				01EB946A19175A3C21F267AB /* XCRemoteSwiftPackageReference "Zipcode" */,
+				A69C49DD169EAB2B5DE30314 /* XCLocalSwiftPackageReference "Packages/AppDesign" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 20FC0935563736AFA6D6D467 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				6F9F7FCAA5B141C4F16FACFB /* Griddy */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		8CCF45C697EC34063E0A6D31 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3A211C6B988F6D45C88275AF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		15436D23A87659EA827E2F31 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Martin Johannesson. All rights reserved.";
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.2;
+			};
+			name = Debug;
+		};
+		322B31C3AAEF431361252D4E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Martin Johannesson. All rights reserved.";
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.2;
+			};
+			name = Release;
+		};
+		90AB53C8ECD8EF0B5E4D4EA1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = DefaultAppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1.0.0;
+				DEVELOPMENT_ASSET_PATHS = "\"Griddy/Preview Content\"";
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_BITCODE = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Griddy/macOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pizza.martin.Griddy;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		A7D520E42FC06AC2986843F1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = DefaultAppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1.0.0;
+				DEVELOPMENT_ASSET_PATHS = "\"Griddy/Preview Content\"";
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_BITCODE = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Griddy/macOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pizza.martin.Griddy;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		81A17773C630D156016EB299 /* Build configuration list for PBXNativeTarget "Griddy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				90AB53C8ECD8EF0B5E4D4EA1 /* Debug */,
+				A7D520E42FC06AC2986843F1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B240BDD61A29BC0F5C63D032 /* Build configuration list for PBXProject "Griddy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				15436D23A87659EA827E2F31 /* Debug */,
+				322B31C3AAEF431361252D4E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A69C49DD169EAB2B5DE30314 /* XCLocalSwiftPackageReference "Packages/AppDesign" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/AppDesign;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		01EB946A19175A3C21F267AB /* XCRemoteSwiftPackageReference "Zipcode" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/Zipcode.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.0.1;
+			};
+		};
+		13F4E40EF19035937969323F /* XCRemoteSwiftPackageReference "SystemKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/SystemKit.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.8.0;
+			};
+		};
+		16668644CE00D4B41221E612 /* XCRemoteSwiftPackageReference "AppRouting" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/AppRouting.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.9.2;
+			};
+		};
+		16AC712E8E639CD6410F61BB /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = exactVersion;
+				version = 2.9.1;
+			};
+		};
+		31FCE31675732815CD3F595C /* XCRemoteSwiftPackageReference "MathKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/MathKit.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.2.2;
+			};
+		};
+		32A20DD3976CDC290245E557 /* XCRemoteSwiftPackageReference "Markin" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/Markin.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.0.1;
+			};
+		};
+		3DC7AA8FE3144B389C27C07C /* XCRemoteSwiftPackageReference "Constructs" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/Constructs.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.1.2;
+			};
+		};
+		3F307791B4EE35784EF7384D /* XCRemoteSwiftPackageReference "CGMath" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/CGMath.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.1.2;
+			};
+		};
+		414C2F0BB9C32E7D64046E63 /* XCRemoteSwiftPackageReference "SwiftUIToolbox" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/SwiftUIToolbox.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.0.0;
+			};
+		};
+		46A4ABBB72928501AB7B4E3E /* XCRemoteSwiftPackageReference "SettingsUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/SettingsUI.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.1.5;
+			};
+		};
+		518077CF5ECAB0F63AF718ED /* XCRemoteSwiftPackageReference "MessagePackKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/MessagePackKit.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.4.1;
+			};
+		};
+		62B3C65BE5E68CA3AB0B17BC /* XCRemoteSwiftPackageReference "AttributionsUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/AttributionsUI.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.1.1;
+			};
+		};
+		641A9F90755B7EBA9476A32F /* XCRemoteSwiftPackageReference "SensibleStyling" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/SensibleStyling.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.2.1;
+			};
+		};
+		8E4F898ABFCC4E72D7EACD49 /* XCRemoteSwiftPackageReference "BinaryDataKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/BinaryDataKit.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.0.7;
+			};
+		};
+		97EB254A5A263E2B64E8B37E /* XCRemoteSwiftPackageReference "TextToolbox" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/TextToolbox.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.4.0;
+			};
+		};
+		9865CCABD14A2E3AF4065584 /* XCRemoteSwiftPackageReference "MarkdownUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/MarkdownUI.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.9.1;
+			};
+		};
+		B79086FEB46515E4C7952644 /* XCRemoteSwiftPackageReference "KeyValueStore" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/KeyValueStore.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.0.2;
+			};
+		};
+		D2ED770386265DADF9029E0E /* XCRemoteSwiftPackageReference "URLToolbox" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/URLToolbox.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.3.1;
+			};
+		};
+		F9879F3ED30146807B13BC0D /* XCRemoteSwiftPackageReference "UserDefaultsUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/UserDefaultsUI.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.0.1;
+			};
+		};
+		FD7C36C56770F4DA6AD31C28 /* XCRemoteSwiftPackageReference "CollectionKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apparata/CollectionKit.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.1.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0A2BBBFE04F59F1FA891CD54 /* SwiftUIToolbox */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 414C2F0BB9C32E7D64046E63 /* XCRemoteSwiftPackageReference "SwiftUIToolbox" */;
+			productName = SwiftUIToolbox;
+		};
+		3371F8078F5618E8F6D26E8D /* SystemKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 13F4E40EF19035937969323F /* XCRemoteSwiftPackageReference "SystemKit" */;
+			productName = SystemKit;
+		};
+		3CE8FB12BA3F21470690C5E0 /* CGMath */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3F307791B4EE35784EF7384D /* XCRemoteSwiftPackageReference "CGMath" */;
+			productName = CGMath;
+		};
+		449E9A962BF8A8EF27DC38F3 /* AppDesign */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AppDesign;
+		};
+		4893DC66F197015E262BA370 /* TextToolbox */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 97EB254A5A263E2B64E8B37E /* XCRemoteSwiftPackageReference "TextToolbox" */;
+			productName = TextToolbox;
+		};
+		4E2A769588F862FD97EAF224 /* URLToolbox */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D2ED770386265DADF9029E0E /* XCRemoteSwiftPackageReference "URLToolbox" */;
+			productName = URLToolbox;
+		};
+		5AA6C987B8484B7DA08C99E8 /* AttributionsUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 62B3C65BE5E68CA3AB0B17BC /* XCRemoteSwiftPackageReference "AttributionsUI" */;
+			productName = AttributionsUI;
+		};
+		5D4A7FC61AE42FDB69BCB2C3 /* MathKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 31FCE31675732815CD3F595C /* XCRemoteSwiftPackageReference "MathKit" */;
+			productName = MathKit;
+		};
+		69732D5521AAAC757D7C9E3B /* KeyValueStore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B79086FEB46515E4C7952644 /* XCRemoteSwiftPackageReference "KeyValueStore" */;
+			productName = KeyValueStore;
+		};
+		784145F3E95BDA1896DF5068 /* SensibleStyling */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 641A9F90755B7EBA9476A32F /* XCRemoteSwiftPackageReference "SensibleStyling" */;
+			productName = SensibleStyling;
+		};
+		A8A8B6F09EC7ED50DB9D621D /* BinaryDataKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8E4F898ABFCC4E72D7EACD49 /* XCRemoteSwiftPackageReference "BinaryDataKit" */;
+			productName = BinaryDataKit;
+		};
+		BF12F2CC97B0FE7E820D7A45 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 16AC712E8E639CD6410F61BB /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+		BFE2721086C1B0A122C420D9 /* UserDefaultsUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F9879F3ED30146807B13BC0D /* XCRemoteSwiftPackageReference "UserDefaultsUI" */;
+			productName = UserDefaultsUI;
+		};
+		CA35C293C467EF20933797F4 /* CollectionKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FD7C36C56770F4DA6AD31C28 /* XCRemoteSwiftPackageReference "CollectionKit" */;
+			productName = CollectionKit;
+		};
+		CE4242269FB886B0D13CDC14 /* AppRouting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 16668644CE00D4B41221E612 /* XCRemoteSwiftPackageReference "AppRouting" */;
+			productName = AppRouting;
+		};
+		D0AA19F1D4E0CA25786EA800 /* Zipcode */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 01EB946A19175A3C21F267AB /* XCRemoteSwiftPackageReference "Zipcode" */;
+			productName = Zipcode;
+		};
+		D18ECF6ED710C7E868F790A8 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9865CCABD14A2E3AF4065584 /* XCRemoteSwiftPackageReference "MarkdownUI" */;
+			productName = MarkdownUI;
+		};
+		EF6FC189437C6F53B124496F /* MessagePackKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 518077CF5ECAB0F63AF718ED /* XCRemoteSwiftPackageReference "MessagePackKit" */;
+			productName = MessagePackKit;
+		};
+		F65E0A67D3DE60BE90C7C3A6 /* Markin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 32A20DD3976CDC290245E557 /* XCRemoteSwiftPackageReference "Markin" */;
+			productName = Markin;
+		};
+		F9D43E9464806C8FD7162D0B /* SettingsUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 46A4ABBB72928501AB7B4E3E /* XCRemoteSwiftPackageReference "SettingsUI" */;
+			productName = SettingsUI;
+		};
+		FA65D964696348B2D10D5245 /* Constructs */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3DC7AA8FE3144B389C27C07C /* XCRemoteSwiftPackageReference "Constructs" */;
+			productName = Constructs;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A9F59B12A47B57632F4B843F /* Project object */;
+}
