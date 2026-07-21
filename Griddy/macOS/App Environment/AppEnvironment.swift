@@ -4,7 +4,6 @@
 
 import Foundation
 import SwiftUI
-import AppRouting
 
 /// An application-wide environment container.
 ///
@@ -24,12 +23,6 @@ public final class AppEnvironment {
 
     /// Application settings used throughout the app.
     public let appSettings: AppSettings
-    
-    /// Auth service
-    internal let authService: AuthService
-    
-    /// Engineering mode
-    internal let engineeringMode: EngineeringMode
 
     // MARK: - Init
 
@@ -39,13 +32,7 @@ public final class AppEnvironment {
     ///    - appSettings: The application settings to expose.
     /// - Note: Use ``live()``/``mock()`` rather than this initializer.
     ///
-    internal init(
-        appSettings: AppSettings,
-        authService: AuthService,
-        engineeringMode: EngineeringMode
-    ) {
+    internal init(appSettings: AppSettings) {
         self.appSettings = appSettings
-        self.authService = authService
-        self.engineeringMode = engineeringMode
     }
 }

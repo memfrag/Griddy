@@ -8,5 +8,42 @@
     <string>https://raw.githubusercontent.com/memfrag/Griddy/main/appcast.xml</string>
     <key>SUPublicEDKey</key>
     <string>AvJMcXvL9lwbU8D00Z9uECjR9zdeOlcsl7Rktg/hQVE=</string>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Griddy Symbol</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>LSHandlerRank</key>
+            <string>Owner</string>
+            <key>LSTypeIsPackage</key>
+            <true/>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>pizza.martin.griddy.symbol</string>
+            </array>
+        </dict>
+    </array>
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>pizza.martin.griddy.symbol</string>
+            <key>UTTypeDescription</key>
+            <string>Griddy Symbol</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>com.apple.package</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>griddy</string>
+                </array>
+            </dict>
+        </dict>
+    </array>
 </dict>
 </plist>

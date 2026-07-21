@@ -3,7 +3,6 @@
 //
 
 import Foundation
-import AppRouting
 
 extension AppEnvironment {
 
@@ -12,15 +11,11 @@ extension AppEnvironment {
     /// Builds a live environment configured for production behavior.
     ///
     /// Intended only for ``#Preview`` usage and tests where an explicit instance is required.
-    /// Most code should access ``shared`` instead.
+    /// Most code should access ``default`` instead.
     ///
     /// - Returns: A new ``AppEnvironment`` instance with live dependencies.
     ///
     internal static func live() -> AppEnvironment {
-        AppEnvironment(
-            appSettings: AppSettings(),
-            authService: AuthService.mock(),
-            engineeringMode: EngineeringMode.shared
-        )
+        AppEnvironment(appSettings: AppSettings())
     }
 }

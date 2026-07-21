@@ -25,8 +25,7 @@ struct MacApp: App {
     }
     
     var body: some Scene {
-        MainWindow(updater: updaterController.updater)
-        MenuBarWindow()
+        DocumentWindow(updater: updaterController.updater)
         SettingsWindow()
         AboutWindow(developedBy: "Martin Johannesson",
                     attributionsWindowID: AttributionsWindow.windowID)

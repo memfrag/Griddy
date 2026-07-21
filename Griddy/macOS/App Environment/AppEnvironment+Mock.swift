@@ -3,7 +3,6 @@
 //
 
 import Foundation
-import AppRouting
 
 extension AppEnvironment {
 
@@ -17,11 +16,7 @@ extension AppEnvironment {
     /// - Returns: A new ``AppEnvironment`` instance with mocked dependencies.
     ///
     internal static func mock() -> AppEnvironment {
-        AppEnvironment(
-            appSettings: AppSettings.mock(),
-            authService: AuthService.mock(),
-            engineeringMode: EngineeringMode.shared
-        )
+        AppEnvironment(appSettings: AppSettings.mock())
     }
     #endif
 }
