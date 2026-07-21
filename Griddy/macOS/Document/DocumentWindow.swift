@@ -34,15 +34,36 @@ private struct DocumentWindowContent: View {
     @State private var selection: SidebarSelection? = .symbol
     @State private var isInspectorPresented = true
 
+    /// Explicit rather than left to SwiftUI's discretion, so the sidebar's
+    /// visibility is deterministic instead of something the split view may
+    /// decide to change while resolving width pressure.
+    @State private var columnVisibility = NavigationSplitViewVisibility.all
+
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             DocumentSidebar(document: $file.package.document,
                             selection: $selection)
         } detail: {
-            SymbolCanvasView(document: file.document)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    BottomStrip(document: file.document)
-                }
+            // Whatever goes in this column must be horizontally compressible.
+            //
+            // `.inspector()` claims its width as a safe-area inset on the
+            // window-level NSSplitView behind NavigationSplitView. Any hard
+            // minimum width in here is added to this column's minimum, which
+            // the split view must then find somewhere; with the inspector open
+            // there is nothing left to take, so it squeezes the sidebar below
+            // its own minimum and the sidebar rows clip off the left edge of
+            // the window. The tell is that closing the inspector fixes it.
+            //
+            // Measured: the sidebar's overflow scaled directly with the bottom
+            // strip's declared minimum width. Keep this column free of hard
+            // minimums, and never introduce a VSplitView or a nested
+            // NavigationSplitView here.
+            VStack(spacing: 0) {
+                SymbolCanvasView(document: file.document)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Divider()
+                BottomStrip(document: file.document)
+            }
         }
         .inspector(isPresented: $isInspectorPresented) {
             DocumentInspector(document: file.document, selection: selection)

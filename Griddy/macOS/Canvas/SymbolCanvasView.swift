@@ -15,19 +15,22 @@ struct SymbolCanvasView: View {
     let document: SymbolDocument
 
     var body: some View {
-        GeometryReader { geometry in
-            Canvas { context, size in
-                let transform = CanvasTransform(
-                    fitting: document.coordinateSystem.canvasBounds,
-                    in: size
-                )
-                var context = context
-                ConstructionLayerRenderer(document: document,
-                                          transform: transform)
-                    .draw(in: &context)
-            }
-            .frame(width: geometry.size.width, height: geometry.size.height)
+        // No GeometryReader and no explicit frame. Canvas already reports its
+        // size to the draw closure, and a hard .frame() here would make the
+        // detail column non-compressible: when .inspector() claims width as a
+        // safe-area inset on the window's split view, there would be nothing
+        // left to give and the sidebar gets squeezed below its minimum.
+        Canvas { context, size in
+            let transform = CanvasTransform(
+                fitting: document.coordinateSystem.canvasBounds,
+                in: size
+            )
+            var context = context
+            ConstructionLayerRenderer(document: document,
+                                      transform: transform)
+                .draw(in: &context)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PaneBackground())
     }
 }

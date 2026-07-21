@@ -61,7 +61,13 @@ struct DocumentSidebar: View {
             }
         }
         .listStyle(.sidebar)
-        .frame(minWidth: 200, idealWidth: 220, maxWidth: 320)
+        // Column width must go through NavigationSplitView's own API, not a
+        // raw .frame(). A frame constraint on a split-view column fights the
+        // split view's sizing: when the inspector claims width as a safe-area
+        // inset, AppKit squeezes the column below its declared minimum while
+        // the List keeps laying out at the frame width, and the rows clip off
+        // the left edge of the window.
+        .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 320)
     }
 
     private var gridDescription: String {

@@ -21,9 +21,6 @@ struct BottomStrip: View {
         }
         .frame(height: 150)
         .background(.bar)
-        .overlay(alignment: .top) {
-            Divider()
-        }
     }
 
     private var validationSection: some View {
@@ -34,22 +31,27 @@ struct BottomStrip: View {
                 Label("No issues", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                     .font(.callout)
+                    .lineLimit(1)
             } else {
                 ForEach(document.validationState.issues) { issue in
                     Label(issue.message, systemImage: symbolName(for: issue.severity))
                         .foregroundStyle(color(for: issue.severity))
                         .font(.callout)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
             }
 
             Spacer(minLength: 0)
         }
         .padding(16)
-        // Flexible, not a hard width. A fixed frame here propagates a hard
-        // minimum up into the window's split-view negotiation and stops the
-        // detail column compressing, which collapses the sidebar when the
-        // inspector is open.
-        .frame(minWidth: 180, idealWidth: 280, maxWidth: 320, alignment: .leading)
+        // No minimum width, and every label truncates rather than demanding
+        // room. Any hard minimum here is added to the detail column's minimum
+        // width, which the window's split view must then find somewhere: with
+        // the inspector open there is nothing left to take, so it squeezes the
+        // sidebar below its own minimum and the rows clip off the left edge of
+        // the window. The overflow scales exactly with what this strip demands.
+        .frame(maxWidth: 300, alignment: .leading)
     }
 
     private var previewSection: some View {
