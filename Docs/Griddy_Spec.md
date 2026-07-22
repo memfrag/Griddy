@@ -638,6 +638,12 @@ Union, subtract, and intersect are all supported (§10.4).
 
 **Ordering is fixed and must not be reversed:** resolve constraints, then apply per-master adjustments, then outline, then boolean-resolve. Outlining a boolean result, or booleaning centerlines, produces incorrect geometry.
 
+**Why the solver cannot be avoided.** There is an obvious-looking shortcut: skip boolean resolution, emit each primitive's outline as its own subpath, and let overlaps union implicitly under non-zero winding. That would also make masters interpolatable for free, since the path structure would be fixed by the primitive graph rather than by where intersections happen to fall.
+
+It does not work. Template artwork inherits `fill-rule="evenodd"` from the root group, and under even-odd an overlap is *subtracted* rather than merged: a circle crossed by a line would export with a bite taken out of it. Non-overlapping outlines are therefore a requirement of the format, not a preference, and producing them needs a real solver.
+
+This also means overlapping and non-overlapping geometry look identical in Griddy but not in the SF Symbols app, because Griddy's canvas fills with non-zero winding to show the intended union while a boolean-resolved export is non-overlapping and reads the same under either rule. The two agree only because export resolves the overlaps; they would diverge immediately if it stopped.
+
 **Consequence for interpolation.** Boolean results are weight-dependent: the number and position of intersections between two outlines changes as stroke width changes, so two masters of the same symbol can legitimately have different path structure. Because export must supply three masters that interpolate (§12.2), that difference has to be reconciled — by a compatibility pass applied to the finished paths (§12.6), not by constraining the solver. The solver stays free; reconciliation happens once, at the end, where it can be checked.
 
 ## 11. Constraint System
