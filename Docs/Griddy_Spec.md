@@ -188,7 +188,7 @@ User sees previews:
 1. User chooses **Export SF Symbols SVG**.
 2. Griddy runs validation.
 3. Blocking errors must be fixed or explicitly bypassed if safe.
-4. Griddy generates an SVG preserving required SF Symbols structure, with all 27 weight/scale slots populated (§14.5).
+4. Griddy generates an SVG preserving required SF Symbols structure, with the three authored masters written into the template's three slots and reconciled so they interpolate (§14.5).
 5. User imports the SVG into Apple's SF Symbols app as the final authority.
 
 ## 8. UX Specification
@@ -615,7 +615,7 @@ Union, subtract, and intersect are all supported (§10.4).
 
 **Ordering is fixed and must not be reversed:** resolve constraints, then apply per-master adjustments, then outline, then boolean-resolve. Outlining a boolean result, or booleaning centerlines, produces incorrect geometry.
 
-**Consequence for interpolation.** Boolean results are weight-dependent: the number and position of intersections between two outlines changes as stroke width changes, so two masters of the same symbol can legitimately have different path structure. This is why Griddy exports every weight/scale slot explicitly rather than relying on Apple to interpolate between masters (§12.2).
+**Consequence for interpolation.** Boolean results are weight-dependent: the number and position of intersections between two outlines changes as stroke width changes, so two masters of the same symbol can legitimately have different path structure. Because export must supply three masters that interpolate (§12.2), that difference has to be reconciled — by a compatibility pass applied to the finished paths (§12.6), not by constraining the solver. The solver stays free; reconciliation happens once, at the end, where it can be checked.
 
 ## 11. Constraint System
 
@@ -723,24 +723,34 @@ The MVP supports three **authored** masters:
 
 Regular is the canonical editing master. All three are authored at **Medium scale only**.
 
-### 12.2 Authored Masters Versus Exported Slots
+### 12.2 Export Targets Three Slots, Not Twenty-Seven
 
-A populated SF Symbols template contains 27 slots: nine weights across three scales. Griddy fills **all 27 slots itself** rather than supplying three masters and asking Apple's app to interpolate the remaining 24.
+Griddy exports **the three authored masters** into the three slots the SF Symbols authoring template provides, and runs a compatibility pass (§12.6) so those three interpolate correctly.
 
-This is the central export decision, and it follows directly from §10.5. Boolean resolution produces weight-dependent path structure, so three exported masters would not reliably interpolate. Rather than constrain the geometry engine to preserve interpolability — which would mean giving up real booleans — Griddy exploits the fact that it is parametric and can simply evaluate every slot directly:
+An earlier draft of this specification called for filling all 27 weight/scale slots directly, on the reasoning that if Apple never interpolates then boolean resolution's weight-dependent path structure would not matter. **That decision is withdrawn.** It was based on an assumption about the template format that turned out to be wrong. Two real templates settle it:
+
+| | Authoring template | Static export |
+|---|---|---|
+| Artwork slots | 3 — `Ultralight-S`, `Regular-S`, `Black-S` | 27 — all weights × scales |
+| Subpaths per slot | 6, identical across all 3 | 7, identical across all 27 |
+| Path commands per slot | 70, identical across all 3 | 78, identical across all 27 |
+
+Two things follow. The template the SF Symbols app exports for editing has **three** artwork slots, so there is nowhere to put 27 authored masters. And **every slot in both files carries identical path topology** — Apple's own fully-populated export holds subpath and command counts constant across all 27 variants, which is what one would expect if interpolation is central to the format rather than incidental.
+
+Topology compatibility is therefore a real constraint on export, not something Griddy can design around. The export loop is:
 
 ```text
-for each of 9 weights x 3 scales:
+for each of the 3 authored masters:
     resolve constraints at that weight
     apply master adjustments
-    outline primitives analytically
-    run boolean solver
-    emit <path> into that slot
+    outline primitives analytically   (§10.5)
+    run boolean solver                (§10.5)
+
+normalise the 3 resulting paths to a shared structure   (§12.6)
+emit each into its slot
 ```
 
-Because every slot is authored, nothing interpolates, and structural differences between slots are irrelevant by construction.
-
-> **Open Question:** This assumes Apple's SF Symbols app accepts a fully-populated template as authoritative and does not re-derive variants from the three annotated masters. This must be verified with a round-trip fixture through the real app before Milestone 7 is considered complete. If the app does re-interpolate, the fallback is §12.6.
+The cost is the compatibility pass. The benefit is that the geometry engine keeps its real boolean solver: booleans may produce whatever structure they produce, and reconciliation happens once, at the end, where it can be validated.
 
 ### 12.3 Weight Propagation
 
@@ -773,40 +783,57 @@ Interior compensation
 
 The six intermediate weights (Thin, Light, Medium, Semibold, Bold, Heavy) interpolate these values piecewise between the authored anchors.
 
-### 12.4 Scale Derivation
+### 12.4 Scale Is Apple's To Derive
 
-Scale is **not authored** in the MVP. Small and Large slots are derived from the Medium construction by rule:
+Scale is **not authored and not exported**. The authoring template's three slots are all at Small (`Ultralight-S`, `Regular-S`, `Black-S`); it provides no Medium or Large artwork slots at all. The SF Symbols app derives the other two scales, exactly as it derives the six intermediate weights.
 
-```text
-S slot = fit(artwork, alignmentRect.small)
-         stroke *= scaleCompensation.small
-L slot = fit(artwork, alignmentRect.large)
-         stroke *= scaleCompensation.large
-```
+The template does carry `Capline`/`Baseline` guides for all three scales, and measurement shows the cap height is identical across them — 70.459 template units at S, M and L in the templates examined. The scales therefore differ in vertical placement and in the margins around the artwork rather than in the size of the artwork itself.
 
-Artwork is fitted to each scale's alignment rect as read from the template, and stroke width is adjusted by a compensation factor rather than scaled purely proportionally, because a proportionally-scaled stroke looks too heavy at Small and too light at Large.
-
-> **Open Question:** The exact values of `scaleCompensation.small` and `scaleCompensation.large` need tuning against real Apple symbols at matched sizes. Treat the initial values as provisional.
-
-Per-scale manual overrides are out of scope for the MVP (§18), but `SymbolMaster` already carries both a weight and a scale so the model does not need to change to add them later.
+This removes the scale-compensation factors an earlier draft called for, along with their open question. `SymbolMaster` still carries both a weight and a scale, so nothing in the model needs to change if per-scale authoring is ever wanted.
 
 ### 12.5 Construction Coherence
 
-The MVP does not require path topology to match across masters, since nothing interpolates. It does still require the *construction* to remain coherent:
+The construction must stay coherent across masters:
 
 - Primitive count is stable across masters.
 - Primitive identity is stable across masters.
-- Per-master adjustments do not add or remove primitives.
-- Boolean operations resolve successfully in every slot.
+- Per-master adjustments add or remove no primitives.
+- Boolean operations resolve successfully at every authored weight.
 - A boolean that resolves at one weight but fails at another is an error.
 
 Warnings are raised when a per-master adjustment changes the *visual* structure — for example when a detail closes up entirely at Black, or a stroke collision appears only at heavy weights.
 
-### 12.6 Interpolation Preview
+Note the distinction from path topology. Coherent *construction* is about the primitive graph and is enforced during editing. Compatible *path structure* is a property of the exported outlines and is produced at export time by §12.6. The first does not imply the second: two masters built from the same primitives can still resolve to different numbers of contours once booleans run.
 
-The UI provides a slider or preview strip showing intermediate weights, rendered by solving that weight directly. This is a design and validation aid, not an exported asset.
+### 12.6 Outline Compatibility Pass
 
-This preview is also the fallback path if the §12.2 Open Question resolves badly: if Apple's app insists on interpolating between three annotated masters, Griddy would need a compatibility pass that normalizes the three masters to a shared path structure by inserting redundant on-curve points, in the manner of variable-font outline compatibility. That work is deliberately not planned unless the fixture round-trip proves it necessary.
+Export must hand the SF Symbols app three masters that interpolate. After each master is outlined and boolean-resolved independently, they are normalised to a shared structure:
+
+```text
+input:  3 outline paths, structurally unrelated
+        Ultralight  2 contours,  18 segments
+        Regular     2 contours,  18 segments
+        Black       3 contours,  27 segments   <- an extra contour
+
+output: 3 outline paths with matching structure
+        same contour count, same segment count per contour,
+        same ordering, same start point per contour
+```
+
+The technique is the one variable-font tools use for compatible outlines:
+
+1. **Pair contours across masters** by correspondence — position, area and winding — rather than by index, since boolean resolution does not guarantee stable ordering.
+2. **Reconcile contour counts.** A contour present in one master and absent in another is the hard case: it means the shapes are genuinely topologically different, most often because a detail closes up at heavy weights. Insert a degenerate contour at the corresponding location so the counts match.
+3. **Reconcile segment counts** within each paired contour by inserting redundant on-curve points, splitting existing segments at parameters chosen to correspond across masters. This changes the path's description but not the shape it describes.
+4. **Align start points and direction** so contours traverse correspondingly.
+
+Two things follow that the specification should be honest about. Step 2 can fail: when a detail genuinely disappears at one weight there is no honest correspondence, and the right response is an export-blocking error naming the primitive, not a silently invented contour. And step 3 increases node counts — the exported path is larger than the minimal outline the solver produced. That is the price of interpolability and is worth paying, but validation should report it.
+
+> **Open Question:** Whether the SF Symbols app rejects mismatched masters outright, or accepts them and produces distorted intermediate weights, is not yet established. This decides whether §15 treats an unreconcilable master as an error or a warning. A round-trip through the real app settles it.
+
+### 12.7 Interpolation Preview
+
+The UI provides a slider or preview strip showing intermediate weights, rendered by solving that weight directly rather than by interpolating paths. This is a design and validation aid, and it is also the most direct check on the compatibility pass: if Griddy's own directly-solved intermediate weight and the interpolation implied by the three exported masters disagree visibly, the reconciliation is wrong.
 
 ## 13. Document Model
 
@@ -951,7 +978,7 @@ In the MVP, exactly three `SymbolMaster` values have `isDerived == false`: Ultra
 
 Griddy imports SVG templates exported from Apple's SF Symbols app.
 
-**Griddy targets exactly one template generation: the one exported by the current SF Symbols app.** The importer reads the template's version marker and refuses anything else:
+**Griddy targets exactly one template generation: v7.0**, the one exported by the current SF Symbols app. The importer reads the template's version marker and refuses anything else:
 
 ```text
 "This template was exported by an older SF Symbols app.
@@ -959,6 +986,16 @@ Griddy imports SVG templates exported from Apple's SF Symbols app.
 ```
 
 Supporting a single template shape keeps the importer strict, the error messages sharp, and the exporter free of version branches — at the cost of requiring users to re-export old templates. Given that re-exporting is a few seconds of work in an app the user already has, this is a good trade.
+
+Two shapes of v7.0 file exist, and the importer accepts both:
+
+| | Authoring template | Static export |
+|---|---|---|
+| What it is | What the SF Symbols app exports for you to draw into | A dump of an existing symbol |
+| Artwork slots | 3, at Small: `Ultralight-S`, `Regular-S`, `Black-S` | 27, all weights × scales |
+| Griddy's use | The document being edited, and the export target | Reference geometry only |
+
+Both carry the same `Notes` / `Guides` / `Symbols` group structure and the same guide set (`Baseline-S/M/L`, `Capline-S/M/L`, margin guides), so one extraction path handles both.
 
 The importer should:
 
@@ -968,6 +1005,7 @@ The importer should:
 - Extract paths into fallback primitives (§14.3).
 - Warn on unsupported SVG features.
 - Avoid silently discarding unknown template structure.
+- Refuse elliptical arc path commands rather than approximating them, since an approximation silently alters imported geometry (§14.3).
 
 ### 14.2 Import Pipeline
 
@@ -1007,7 +1045,8 @@ The exporter should:
 - Generate an SF Symbols-compatible SVG in the pinned template structure (§14.1).
 - Preserve the required template hierarchy.
 - Include required alignment and margin structure.
-- Populate all 27 weight/scale slots (§12.2).
+- Populate the template's three artwork slots (§12.2).
+- Reconcile the three masters to a shared path structure so they interpolate (§12.6).
 - Emit exact arcs and Béziers, never flattened polylines (§10.5).
 - Retain a useful warning report.
 
@@ -1015,19 +1054,21 @@ The exporter should:
 
 ```text
 Griddy document
-  -> for each of 27 weight/scale slots:
+  -> for each of the 3 authored masters:
        resolve constraints at that weight
-       derive slot parameters (§12.3, §12.4)
        apply per-master adjustments
        outline primitives analytically  (§10.5)
        run boolean solver               (§10.5)
-       emit <path> into the slot
+  -> reconcile the 3 paths to a shared structure  (§12.6)
+  -> emit each into its slot
   -> validate SVG template structure
   -> write SVG
   -> save export report
 ```
 
-The per-slot solves are independent and may run concurrently. A failure in any single slot fails the export and is reported with the slot identified, rather than producing a partially-populated template.
+The three master solves are independent and may run concurrently. The reconciliation that follows is not: it needs all three at once, which is the one genuine barrier in the pipeline.
+
+A failure in any single master fails the export, reported with the master identified, rather than producing a partially-populated template. A reconciliation that cannot be completed — because the masters are genuinely topologically different — fails the export naming the primitive responsible, rather than inventing a correspondence that does not exist (§12.6).
 
 ## 15. Validation
 
@@ -1062,7 +1103,18 @@ This category is deliberately small. Because constraints are invariants (§11.2)
 
 - Primitive identities match across masters.
 - Per-master adjustments add or remove no primitives.
-- Booleans resolve in every slot, not just Regular.
+- Booleans resolve at every authored master, not just Regular.
+
+#### Interpolation Validation
+
+Reinstated. An earlier draft dropped this category on the assumption that Griddy authored every exported slot and nothing interpolated; §12.2 withdraws that.
+
+- The three masters reconcile to a shared path structure (§12.6).
+- Contour counts correspond across masters.
+- Segment counts and ordering match after reconciliation.
+- Start points and traversal direction correspond.
+- A master that cannot be reconciled is reported against the primitive responsible.
+- Node count added by reconciliation is reported, since it inflates the exported path beyond the minimal outline.
 
 #### Visual Validation
 
@@ -1109,13 +1161,13 @@ struct ValidationState: Codable, Equatable {
 
 ### 15.3 Validation Schedule
 
-A full validation pass now implies 27 boolean solves plus rasterization, so it cannot run on every edit. But §6.5 requires continuous feedback. The resolution is tiering by cost, not reducing frequency.
+A full validation pass implies boolean resolution at three masters, a reconciliation across them, and rasterization, so it cannot run on every edit. But §6.5 requires continuous feedback. The resolution is tiering by cost, not reducing frequency.
 
 | Tier | When | Where | Checks |
 |---|---|---|---|
 | 1 | Every edit, synchronously | Main actor | Bounds, margins, zero-length segments, open/closed paths. Target under 1 ms. |
 | 2 | Debounced 250 ms after edits settle | Background | Boolean resolution at the three authored masters, visual center, optical bounds, raster previews, stroke collision, negative space. |
-| 3 | Export only | Background | Full 27-slot solve, template structure validation, export report. |
+| 3 | Export only | Background | Three-master solve, outline compatibility pass, template structure validation, export report. |
 
 Rules:
 
@@ -1318,7 +1370,7 @@ The first version should be disciplined and narrow.
 7. Preview weight interpolation.
 8. Preview common point sizes.
 9. Validate bounds, margins, construction coherence, and template structure.
-10. Export an SVG with all 27 weight/scale slots populated.
+10. Export an SVG with the three authored masters reconciled so they interpolate.
 
 ### Excluded
 
@@ -1333,7 +1385,7 @@ The first version should be disciplined and narrow.
 - Text and typography tooling.
 - Advanced arbitrary Bézier editing as a primary workflow.
 
-Note the distinction between authoring and export: the MVP *authors* three masters at one scale, but *exports* all 27 slots. Deriving a slot is not the same as supporting its manual editing.
+The MVP authors three masters at one scale and exports exactly those three. The remaining weights and both other scales are derived by the SF Symbols app, not by Griddy (§12.2, §12.4).
 
 ## 19. Milestones
 
@@ -1432,7 +1484,7 @@ Deliverables:
 
 Acceptance criteria:
 
-- Three authored masters produce all 27 derived slots.
+- Three authored masters export into the template's three slots.
 - Per-master adjustments do not break primitive identity.
 - Warnings appear when a detail closes or strokes collide at heavy weights.
 
@@ -1443,7 +1495,8 @@ Deliverables:
 - Three-tier validation engine.
 - Bottom validation strip with staleness handling.
 - Small-size previews.
-- SF Symbols SVG exporter covering all 27 slots.
+- SF Symbols SVG exporter writing the three authored masters.
+- Outline compatibility pass reconciling the masters (§12.6).
 - Export validation report.
 - Golden SVG round-trip fixtures.
 
@@ -1453,7 +1506,7 @@ Acceptance criteria:
 - Tier 2 results appear shortly after edits settle without stuttering the canvas.
 - User sees export-blocking errors before export.
 - Exported fixtures import successfully into Apple's SF Symbols app.
-- The §12.2 Open Question is resolved by actual round-trip.
+- The §12.6 Open Question is resolved by actual round-trip: whether mismatched masters are rejected or silently distorted.
 
 ## 20. Acceptance Criteria for MVP
 
@@ -1465,7 +1518,7 @@ The MVP is complete when:
 4. The canvas displays grid, safe area, margins, baseline, and key shapes derived from the template.
 5. The inspector exposes semantic properties for selected primitives.
 6. Constraints restrict geometry and cannot be violated.
-7. The app derives all 27 weight/scale slots from three authored masters.
+7. The app exports three authored masters whose paths interpolate.
 8. The user can apply per-master optical adjustments.
 9. The app detects bounds, construction, and visual problems without stalling the canvas.
 10. The app previews the symbol at common small sizes.
@@ -1555,19 +1608,19 @@ Mitigation:
 
 ### Risk: SF Symbols Template Compatibility
 
-Apple's SVG template requirements may change, and §12.2 rests on an unverified assumption about how the app treats fully-populated templates.
+Apple's SVG template requirements may change. This risk has already materialised once: an earlier draft of §12.2 rested on an assumption about the template format that two real exports disproved, and the export strategy had to be rewritten. The lesson is that assumptions about this format must be checked against real files rather than reasoned about.
 
 Mitigation:
 
 - Keep importer/exporter isolated in `GriddySymbols`.
 - Preserve unknown SVG metadata where possible.
-- Resolve the §12.2 Open Question by real round-trip before Milestone 7 closes.
+- Resolve the §12.6 Open Question by real round-trip before Milestone 7 closes.
 - Treat Apple's SF Symbols app as the final compatibility authority.
 - Pin one template generation (§14.1) rather than guessing at compatibility across several.
 
 ### Risk: Validation Cost
 
-A full validation pass implies 27 boolean solves and rasterization.
+A full validation pass implies three boolean solves, a reconciliation across them, and rasterization.
 
 Mitigation:
 
@@ -1623,7 +1676,7 @@ Recommended order:
 8. Add the tiered validation engine.
 9. Add SVG import.
 10. Add masters and slot derivation.
-11. Add SVG export across all 27 slots.
+11. Add the outline compatibility pass and SVG export.
 
 ### 23.2 Early Technical Decisions
 
@@ -1678,7 +1731,7 @@ Possible post-MVP additions:
 ## 25. Glossary
 
 - **Authored master:** One of the three weight variants the designer edits directly (Ultralight, Regular, Black, all at Medium scale).
-- **Derived slot:** One of the 27 weight/scale combinations Griddy solves at export time.
+- **Derived slot:** One of the 24 weight/scale combinations the SF Symbols app produces from the three exported masters.
 - **Primitive:** A semantic geometry object such as a circle, line, or arc.
 - **Outlining:** Converting a stroked centerline into a closed, filled outline.
 - **Constraint:** A declared geometric relationship, treated as an invariant.
@@ -1693,4 +1746,4 @@ Possible post-MVP additions:
 
 Griddy should be a small, opinionated, native macOS tool that helps designers create valid custom SF Symbols by working with the structure of icon design rather than against it. The product succeeds if it makes well-proportioned, interoperable, grid-based, weight-aware symbols easier to create than they are in general-purpose vector tools.
 
-Two implementation choices matter more than the rest. The first is that the native document model is semantic and parametric: SVG import/export is essential, but SVG does not define the app's internal truth. The second is that Griddy owns its geometry pipeline end to end — analytic outlining and a real boolean solver — and uses its parametric model to author every exported slot directly rather than depending on interpolation it cannot control.
+Two implementation choices matter more than the rest. The first is that the native document model is semantic and parametric: SVG import/export is essential, but SVG does not define the app's internal truth. The second is that Griddy owns its geometry pipeline end to end — analytic outlining and a real boolean solver — and reconciles its three exported masters itself rather than hoping they happen to interpolate.
