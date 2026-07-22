@@ -852,6 +852,23 @@ The technique is the one variable-font tools use for compatible outlines:
 
 Step 3 increases node counts — the exported path is larger than the minimal outline the solver produced. That is the price of interpolability and is worth paying, but validation should report it.
 
+#### Verified: Apple Rejects, It Does Not Degrade
+
+This was an open question and is now settled by experiment rather than inference. A Griddy export whose three masters had matching subpath counts but differing path command counts was imported into the SF Symbols app, which refused it:
+
+```text
+The symbol could not be imported.
+Errors: The provided variants are not interpolatable.
+```
+
+Three consequences.
+
+**Interpolability is a hard gate, not a quality concern.** The app does not accept mismatched masters and produce poor intermediate weights; it declines the file entirely. The compatibility pass is therefore mandatory for any export to be usable at all.
+
+**The failure is ordinary, not exotic.** The rejected symbol was a circle unioned with an overlapping line: two primitives. Boolean resolution cut the outlines at different places as the stroke width changed, giving 2 subpaths at every weight but 20, 22 and 22 path commands. Anything that overlaps will do this.
+
+**Griddy's own cheap check agrees with Apple's verdict.** The export that was rejected had already warned that the masters "will not interpolate until reconciled". Comparing subpath *and* command counts is enough to predict the refusal, which is what makes the Tier 2 check in §15.1 worth running continuously.
+
 #### Unreconcilable Masters Are Rejected Loudly
 
 Step 2 can fail. When a detail genuinely disappears at one weight there is no honest correspondence between the masters, and no amount of point insertion creates one. Griddy **rejects this outright**. It is an error, not a warning, and it is not bypassable: there is no "export anyway" for this case, because the resulting symbol would interpolate into visible garbage at the intermediate weights the designer never sees in Griddy.
