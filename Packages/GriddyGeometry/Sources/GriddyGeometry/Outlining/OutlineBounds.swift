@@ -12,7 +12,7 @@ import Foundation
 /// through that angle. Endpoints supply the rest.
 ///
 /// This matters because the bounds set the exported symbol's advance width
-/// (spec 9.3), and a bound that is too small by a fraction of a unit shows up
+/// (spec 9.5), and a bound that is too small by a fraction of a unit shows up
 /// as a symbol that crowds the text beside it.
 public extension ArcSegment {
 

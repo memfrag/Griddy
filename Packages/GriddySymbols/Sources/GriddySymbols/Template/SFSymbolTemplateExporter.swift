@@ -70,7 +70,7 @@ public struct ExportReport: Equatable, Sendable {
     ///
     /// Recomputed from each master's own artwork rather than inherited from the
     /// source template. Reported because it is the one exported quantity a
-    /// designer cannot see on the canvas. See spec 9.3.
+    /// designer cannot see on the canvas. See spec 9.5.
     public var advances: [SymbolSlot: Double]
 
     /// Path commands per master.
@@ -173,7 +173,7 @@ public enum SFSymbolTemplateExporter {
 
         // Resolve each master's horizontal metrics from its own outline. The
         // advance width is an output of the design, not a property of whichever
-        // template the document started from -- see spec 9.3.
+        // template the document started from -- see spec 9.5.
         let system = document.coordinateSystem
         let unit = system.unitInTemplateSpace
         let resolvedMargins = zip(SymbolWeight.authored, reconciled).map {

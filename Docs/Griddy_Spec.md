@@ -503,6 +503,44 @@ enum SymbolDesignIntent: String, Codable {
 
 The canvas should emphasize the corresponding key shape and compare artwork occupancy against it.
 
+### 9.5 Glyph Metrics and Margins
+
+**SF Symbols are glyphs in a font.** Every template the SF Symbols app writes says so in its header comment:
+
+```text
+glyph: "102240", point size: 100.0, font version: "21.1d1e1"
+```
+
+The template's geometry follows entirely from that, and so does the split between what varies and what does not.
+
+**Baseline and cap height are font-wide.** Every glyph in a typeface shares them, which is why they measure identically in every template and for every symbol — 696 and 625.541 at Small in all three files examined, 1126 and 1055.54 at Medium, 1556 and 1485.54 at Large. No symbol can move them. This is why §9.1 anchors the unit to cap height: it is the one quantity a document cannot invalidate.
+
+**The margins are per-glyph horizontal metrics** — the left side bearing and the advance width. They differ between symbols because glyphs are different widths, and between weights because each weight is a separate font in which the same glyph is drawn heavier, and therefore wider:
+
+| | Ultralight | Regular | Black |
+|---|---|---|---|
+| `app` | 85.84 | 91.01 | 94.82 |
+| `apple.terminal` | 108.02 | 110.11 | 112.10 |
+| `takeoutbag.and.cup.and.straw` | 109.79 | 117.29 | 123.38 |
+
+**The slot group's transform is the glyph origin.** A slot is written `<g id="Regular-S" transform="matrix(1 0 0 1 1404.34 696)">`, where x is exactly `left-margin-Regular-S` and y is exactly `Baseline-S`. Measured across three templates and three weights each, `groupX − leftMarginX` is 0.00 in all nine. Path data is therefore expressed relative to the left margin and the baseline — the pen position in text layout.
+
+**The standard side bearing is 9.765625**, which is `10000 / 1024`: 100 font units in a 1024-unit em at point size 100. It appears on the left of all nine masters examined and on the right of six. Equal bearings centre the artwork within its advance, which is the default.
+
+`takeoutbag` is the exception, carrying right bearings of 6.67, 4.09 and 2.36 — a deliberate optical adjustment for a shape whose right edge is a round cup. The template's own notes describe the mechanism: *"Leading and trailing margins … can be adjusted by modifying the x-location of the margin guidelines. Modifications are automatically applied proportionally to all scales and weights."* Griddy therefore treats the standard bearing as a **default, not a rule**, and allows per-weight overrides (`SymbolMargins`).
+
+#### Consequences for Griddy
+
+**Margins are an output, not an input.** Griddy originally read the advance width from whichever template a document started from, made it the canvas width, and never wrote it back — so an exported symbol claimed the advance of an unrelated symbol, and a new document was 26.63 units wide because that is how wide `custom.cup.and.bag` happens to be. Export now computes the margins per master from that master's own outline and writes them into the guides.
+
+**The canvas is not the advance.** ``designArea`` is a fixed 48 × 32 units, independent of the template and in whole units throughout. The margin box is drawn inside it, computed live from the artwork.
+
+**Export normalises horizontal placement.** Each master is shifted so its leftmost point sits at the intended left side bearing. Without this the bearing follows wherever the designer happened to draw, and since heavier masters extend further left, it would differ per master — which reads, in the SF Symbols app, as the symbol sliding sideways as the weight changes. Measured on a real Griddy export before this landed: 27.20, 25.99 and 23.45 template units.
+
+The cost is that **horizontal position in the editor carries no information**. Two documents whose artwork differs only by a horizontal translation export byte-for-byte identically. Vertical position, by contrast, is preserved exactly, because the baseline is a font-wide metric that nothing normalises against. Both are asserted by tests.
+
+> **Open Question:** Whether the editor should surface this — by showing the resolved bearings in the inspector, by offering direct bearing editing in place of the override API, or by constraining horizontal dragging. At present the canvas permits a gesture that has no effect on the output, which is a poor thing to leave undocumented in the UI.
+
 ## 10. Geometry Model
 
 ### 10.1 Primitive-based Drawing

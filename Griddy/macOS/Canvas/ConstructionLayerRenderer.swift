@@ -169,7 +169,7 @@ struct ConstructionLayerRenderer {
     private func drawMargins(in context: inout GraphicsContext) {
         // Computed from this master's artwork, not copied from whatever the
         // source template carried — so the guide moves as the drawing does,
-        // which is the whole point of an advance width. See spec 9.3.
+        // which is the whole point of an advance width. See spec 9.5.
         let resolved = ResolvedMargins.resolve(
             outline: document.resolvedOutline(weight: weight),
             weight: weight,

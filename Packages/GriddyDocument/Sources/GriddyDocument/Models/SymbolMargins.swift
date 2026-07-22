@@ -14,7 +14,7 @@ import GriddyGeometry
 ///
 /// Griddy used to treat them as an input, inheriting whatever the source
 /// template happened to carry and never writing them back, so an exported
-/// symbol claimed the advance width of an unrelated symbol. See spec 9.3.
+/// symbol claimed the advance width of an unrelated symbol. See spec 9.5.
 ///
 /// Overrides exist because Apple's own symbols use them: `takeoutbag.and.cup.
 /// and.straw` has right side bearings of 6.67, 4.09 and 2.36 where the default

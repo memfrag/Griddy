@@ -7,7 +7,7 @@ import GriddyGeometry
 
 /// A construction guide used to harmonise visual size across icons.
 ///
-/// See spec 9.3.
+/// See spec 9.5.
 public struct KeyShape: Codable, Hashable, Sendable, Identifiable {
 
     public var id: UUID
