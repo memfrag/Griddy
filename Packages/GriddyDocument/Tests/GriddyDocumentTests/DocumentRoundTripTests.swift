@@ -11,7 +11,7 @@ import GriddyConstraints
 private func makeDocument() -> SymbolDocument {
     var document = SymbolDocument.new(
         name: "g.magnify",
-        templateMetrics: .provisionalBlankTemplate,
+        templateMetrics: .blankTemplate,
         appVersion: "1.0.0",
         author: "Martin Johannesson",
         now: Date(timeIntervalSince1970: 1_770_000_000)
@@ -145,18 +145,24 @@ struct NewDocumentTests {
     @Test("A new document derives its coordinate system from the template")
     func derivesFromTemplate() {
         let document = SymbolDocument.new(name: "Untitled",
-                                          templateMetrics: .provisionalBlankTemplate,
+                                          templateMetrics: .blankTemplate,
                                           appVersion: "1.0.0")
 
-        #expect(document.coordinateSystem.templateMetrics == .provisionalBlankTemplate)
-        #expect(document.coordinateSystem.unitInTemplateSpace == 6.25)
+        #expect(document.coordinateSystem.templateMetrics == .blankTemplate)
         #expect(document.grid.canvasSize.height == 16)
+
+        // One unit is a sixteenth of cap height, and cap height now comes from
+        // a real SF Symbols template rather than a round placeholder.
+        let expectedUnit = TemplateMetrics.blankTemplate.capHeight / 16
+        #expect(abs(document.coordinateSystem.unitInTemplateSpace - expectedUnit) < 1e-12)
+        #expect(abs(TemplateMetrics.blankTemplate.capHeight - 70.459) < 1e-3,
+                "measured from Baseline-S and Capline-S of a v7.0 template")
     }
 
     @Test("A new document starts with the three authored masters")
     func authoredMasters() {
         let document = SymbolDocument.new(name: "Untitled",
-                                          templateMetrics: .provisionalBlankTemplate,
+                                          templateMetrics: .blankTemplate,
                                           appVersion: "1.0.0")
 
         #expect(document.masters.count == 3)
@@ -167,7 +173,7 @@ struct NewDocumentTests {
     @Test("A new document has default key shapes and one layer")
     func defaults() {
         let document = SymbolDocument.new(name: "Untitled",
-                                          templateMetrics: .provisionalBlankTemplate,
+                                          templateMetrics: .blankTemplate,
                                           appVersion: "1.0.0")
 
         #expect(document.keyShapes.all.count == 4)

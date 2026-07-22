@@ -7,27 +7,32 @@ import GriddyGeometry
 
 extension TemplateMetrics {
 
-    /// Placeholder metrics standing in for the bundled blank template.
+    /// Metrics for a new, empty document.
     ///
-    /// - Important: These are **provisional round numbers, not Apple's real
-    ///   template values.** Milestone 5 adds the SVG parser, at which point a
-    ///   new document loads `Resources/BlankSymbolTemplate.svg` through the
-    ///   ordinary importer and these metrics are read from the file rather than
-    ///   hardcoded here. See spec 7.1 and 14.2.
+    /// These are **measured from a real SF Symbols template v7.0**, not
+    /// invented: baseline and capline are the `Baseline-S` and `Capline-S`
+    /// guides, giving a cap height of 70.459 template units and therefore a
+    /// unit of 4.4037. The left margin is the leftmost margin guide.
     ///
-    ///   The seam is deliberate: everything downstream already consumes
-    ///   `TemplateMetrics`, so replacing this constant with parsed values
-    ///   changes nothing else.
-    ///
-    ///   A cap height of 100 makes one unit exactly 6.25 template units.
-    public static let provisionalBlankTemplate = TemplateMetrics(
-        baselineY: 100,
-        caplineY: 0,
-        leftMarginX: 0,
+    /// - Note: This still stands in for loading the bundled blank template
+    ///   through the importer, which is how spec 7.1 wants a new document
+    ///   created -- one code path shared with import. The seam is unchanged:
+    ///   everything downstream consumes `TemplateMetrics`, so swapping the
+    ///   constant for parsed values changes nothing else. What has changed is
+    ///   that the numbers are now real, so a new document has the same
+    ///   coordinate system as an imported one.
+    public static let blankTemplate = TemplateMetrics(
+        baselineY: 95.215,
+        caplineY: 24.756,
+        leftMarginX: 241.815,
         alignmentRects: [
-            .small: TemplateRect(x: 0, y: 0, width: 100, height: 100),
-            .medium: TemplateRect(x: 0, y: 0, width: 100, height: 100),
-            .large: TemplateRect(x: 0, y: 0, width: 100, height: 100)
+            .small: TemplateRect(x: 241.815, y: 24.756,
+                                 width: 109.792, height: 70.459),
+            .medium: TemplateRect(x: 241.815, y: 454.755,
+                                  width: 109.792, height: 70.460),
+            .large: TemplateRect(x: 241.815, y: 884.755,
+                                 width: 109.792, height: 70.460)
         ]
     )
+
 }

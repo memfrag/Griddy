@@ -9,7 +9,7 @@ import GriddyGeometry
 
 private func document(with primitive: IconPrimitive) -> SymbolDocument {
     var document = SymbolDocument.new(name: "Test",
-                                      templateMetrics: .provisionalBlankTemplate,
+                                      templateMetrics: .blankTemplate,
                                       appVersion: "1.0.0")
     document.addPrimitive(primitive)
     return document

@@ -101,7 +101,7 @@ final class SymbolDocumentFile: ReferenceFileDocument {
     init() {
         let document = SymbolDocument.new(
             name: "Untitled",
-            templateMetrics: .provisionalBlankTemplate,
+            templateMetrics: .blankTemplate,
             appVersion: Bundle.main.appVersionString
         )
         storage = PackageStorage(SymbolDocumentPackage(document: document))

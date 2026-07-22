@@ -10,7 +10,7 @@ import GriddyConstraints
 
 private func emptyDocument() -> SymbolDocument {
     SymbolDocument.new(name: "Test",
-                       templateMetrics: .provisionalBlankTemplate,
+                       templateMetrics: .blankTemplate,
                        appVersion: "1.0.0")
 }
 

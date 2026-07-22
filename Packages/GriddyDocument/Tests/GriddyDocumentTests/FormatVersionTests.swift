@@ -10,7 +10,7 @@ import GriddyGeometry
 private func makePackage(formatVersion: Int = DocumentFormatVersion.current,
                          extraFiles: [String: Data] = [:]) throws -> FileWrapper {
     var document = SymbolDocument.new(name: "Test",
-                                      templateMetrics: .provisionalBlankTemplate,
+                                      templateMetrics: .blankTemplate,
                                       appVersion: "1.0.0")
     document.metadata.documentFormatVersion = formatVersion
 
@@ -175,7 +175,7 @@ struct MigrationTests {
     @Test("A current-version package needs no migration")
     func noMigrationNeeded() {
         let document = SymbolDocument.new(name: "Test",
-                                          templateMetrics: .provisionalBlankTemplate,
+                                          templateMetrics: .blankTemplate,
                                           appVersion: "1.0.0")
         let package = SymbolDocumentPackage(document: document)
         #expect(!DocumentMigration.needsMigration(package))

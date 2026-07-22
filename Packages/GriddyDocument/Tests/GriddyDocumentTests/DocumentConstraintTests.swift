@@ -11,7 +11,7 @@ import GriddyConstraints
 private func documentWithCircle(at point: IconPoint,
                                 radius: Double = 2) -> (SymbolDocument, CirclePrimitive) {
     var document = SymbolDocument.new(name: "Test",
-                                      templateMetrics: .provisionalBlankTemplate,
+                                      templateMetrics: .blankTemplate,
                                       appVersion: "1.0.0")
     let circle = CirclePrimitive(center: point, radius: radius)
     document.addPrimitive(.circle(circle))
@@ -154,7 +154,7 @@ struct DocumentConstraintTests {
     @Test("Resolution respects the primitive being held")
     func pinnedDuringResolve() throws {
         var document = SymbolDocument.new(name: "Test",
-                                          templateMetrics: .provisionalBlankTemplate,
+                                          templateMetrics: .blankTemplate,
                                           appVersion: "1.0.0")
         let first = CirclePrimitive(center: IconPoint(x: 4, y: 4), radius: 2)
         let second = CirclePrimitive(center: IconPoint(x: 10, y: 10), radius: 2)
