@@ -97,6 +97,12 @@ struct EditCommands: Commands {
             }
             .keyboardShortcut("i", modifiers: [.command, .shift])
             .disabled(file == nil)
+
+            Button("Export SF Symbols SVG…") {
+                exportTemplate()
+            }
+            .keyboardShortcut("e", modifiers: [.command, .shift])
+            .disabled(file == nil)
         }
 
         CommandGroup(after: .pasteboard) {
@@ -153,6 +159,74 @@ struct EditCommands: Commands {
         } catch {
             present(ImportFailure(error))
         }
+    }
+
+    /// Exports the document as an SF Symbols template.
+    private func exportTemplate() {
+        guard let file else {
+            return
+        }
+
+        let document = file.document
+        let source = file.package.sourceTemplate
+
+        let result: (data: Data, report: ExportReport)
+        do {
+            result = try SFSymbolTemplateExporter.export(document: document,
+                                                         sourceTemplate: source)
+        } catch {
+            present(ImportFailure(error))
+            return
+        }
+
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.svg]
+        panel.nameFieldStringValue = "\(document.metadata.name).svg"
+        panel.message = "Export a template to import into the SF Symbols app."
+
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return
+        }
+
+        do {
+            try result.data.write(to: url)
+        } catch {
+            present(ImportFailure(error))
+            return
+        }
+
+        presentReport(result.report)
+    }
+
+    /// Shows what was exported, and what the designer still has to do by hand.
+    ///
+    /// Layer assignment happens in the SF Symbols app and is lost on every
+    /// re-import, so the checklist is the only thing carrying that intent
+    /// across. See spec 14.6.
+    private func presentReport(_ report: ExportReport) {
+        var lines: [String] = []
+
+        if !report.layerAssignments.isEmpty {
+            lines.append("Assign these layers in the SF Symbols app:")
+            for assignment in report.layerAssignments {
+                let role = assignment.role == .cutout ? "erase" : "fill"
+                lines.append("    \(assignment.range)  \(assignment.layerName)  \(role)")
+            }
+        }
+
+        if !report.warnings.isEmpty {
+            if !lines.isEmpty {
+                lines.append("")
+            }
+            lines.append(contentsOf: report.warnings)
+        }
+
+        let alert = NSAlert()
+        alert.alertStyle = report.warnings.isEmpty ? .informational : .warning
+        alert.messageText = "Exported \(report.slotsWritten.count) masters."
+        alert.informativeText = lines.joined(separator: "\n")
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 
     /// Reports a refusal as an alert.

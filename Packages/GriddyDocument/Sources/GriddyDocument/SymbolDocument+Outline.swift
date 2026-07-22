@@ -48,9 +48,9 @@ extension SymbolDocument {
     /// `visiting` guards against a compound that reaches itself, which would
     /// otherwise recurse until the stack runs out. A cycle cannot be drawn, so
     /// it resolves to nothing rather than crashing.
-    func outline(for primitive: IconPrimitive,
-                 weight: SymbolWeight,
-                 visiting: Set<PrimitiveID>) -> OutlinePath? {
+    public func outline(for primitive: IconPrimitive,
+                        weight: SymbolWeight,
+                        visiting: Set<PrimitiveID> = []) -> OutlinePath? {
         guard !visiting.contains(primitive.id) else {
             return nil
         }

@@ -57,6 +57,26 @@ public struct SVGTransform: Equatable, Sendable {
                   y: b * point.x + d * point.y + f)
     }
 
+    /// The inverse, or `nil` when the transform collapses space.
+    ///
+    /// Export needs this: a slot group carries a transform, so path data
+    /// written into it must be expressed in that group's local coordinates,
+    /// which means undoing the transform the importer applied.
+    public var inverted: SVGTransform? {
+        let determinant = a * d - b * c
+        guard abs(determinant) > 1e-12 else {
+            return nil
+        }
+        return SVGTransform(
+            a: d / determinant,
+            b: -b / determinant,
+            c: -c / determinant,
+            d: a / determinant,
+            e: (c * f - d * e) / determinant,
+            f: (b * e - a * f) / determinant
+        )
+    }
+
     // MARK: Parsing
 
     /// Parses a `transform` attribute.
