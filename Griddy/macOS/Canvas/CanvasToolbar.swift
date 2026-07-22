@@ -6,6 +6,7 @@ import SwiftUI
 import GriddyGeometry
 import GriddyDocument
 import GriddySymbols
+import GriddyValidation
 
 /// The tool palette and canvas controls. See spec 8.5.
 struct CanvasToolbar: ToolbarContent {
@@ -193,6 +194,18 @@ struct EditCommands: Commands {
         let document = file.document
         let source = file.package.sourceTemplate
 
+        // Tier 3: the full pass, run once, on the file about to be written.
+        // The strip's continuous result is debounced and may be a quarter of a
+        // second stale, which is fine for a hint and not fine for a gate. See
+        // spec 15.3.
+        let issues = StructuralValidator.issues(in: document)
+            + GeometricValidator.issues(in: document)
+        let blocking = issues.filter(\.severity.blocksExport)
+
+        if !blocking.isEmpty, !confirmExport(despite: blocking) {
+            return
+        }
+
         let result: (data: Data, report: ExportReport)
         do {
             result = try SFSymbolTemplateExporter.export(document: document,
@@ -219,6 +232,31 @@ struct EditCommands: Commands {
         }
 
         presentReport(result.report)
+    }
+
+    /// Warns before writing a file validation says will be refused.
+    ///
+    /// Not a hard block. Griddy's checks are a model of what the SF Symbols app
+    /// accepts, and that model has been wrong before — it passed a file Apple
+    /// rejected, twice. Refusing outright would make a bug in the validator
+    /// into a wall the designer cannot get past, so the file is still
+    /// obtainable; the default is just to stop. See spec 15.3.
+    private func confirmExport(despite blocking: [ValidationIssue]) -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = blocking.count == 1
+            ? "This symbol has a problem that will stop it importing."
+            : "This symbol has \(blocking.count) problems that will stop it "
+                + "importing."
+        alert.informativeText = blocking
+            .map { issue in
+                [issue.message, issue.suggestedFix].compactMap { $0 }
+                    .joined(separator: " ")
+            }
+            .joined(separator: "\n\n")
+        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: "Export Anyway")
+        return alert.runModal() == .alertSecondButtonReturn
     }
 
     /// Shows what was exported, and what the designer still has to do by hand.

@@ -66,7 +66,10 @@ private struct DocumentWindowContent: View {
                 SymbolCanvasView(file: file, editor: editor)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 Divider()
-                BottomStrip(document: file.document, state: validator.state)
+                BottomStrip(document: file.document,
+                            state: validator.state) { ids in
+                    editor.selection = ids.filter(file.document.isEditable)
+                }
             }
         }
         .inspector(isPresented: $isInspectorPresented) {

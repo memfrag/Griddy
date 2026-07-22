@@ -3,6 +3,7 @@
 //
 
 import SwiftUI
+import GriddyGeometry
 import GriddyDocument
 
 /// The validation and preview strip along the bottom of the document window.
@@ -12,6 +13,10 @@ struct BottomStrip: View {
 
     let document: SymbolDocument
     let state: ValidationState
+
+    /// Selects the primitives an issue is about. An issue naming geometry the
+    /// user then has to hunt for is only half a report.
+    let reveal: (Set<PrimitiveID>) -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -47,12 +52,7 @@ struct BottomStrip: View {
             } else {
                 // Sorted so an error is never hidden below a note.
                 ForEach(sortedIssues) { issue in
-                    Label(issue.message, systemImage: symbolName(for: issue.severity))
-                        .foregroundStyle(color(for: issue.severity))
-                        .font(.callout)
-                        .lineLimit(2)
-                        .truncationMode(.tail)
-                        .help(issue.suggestedFix ?? issue.message)
+                    issueRow(issue)
                 }
             }
 
@@ -107,6 +107,32 @@ struct BottomStrip: View {
         }
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func issueRow(_ issue: ValidationIssue) -> some View {
+        let label = Label(issue.message,
+                          systemImage: symbolName(for: issue.severity))
+            .foregroundStyle(color(for: issue.severity))
+            .font(.callout)
+            .lineLimit(2)
+            .truncationMode(.tail)
+            .help(issue.suggestedFix ?? issue.message)
+
+        if issue.affectedPrimitiveIDs.isEmpty {
+            label
+        } else {
+            Button {
+                reveal(Set(issue.affectedPrimitiveIDs))
+            } label: {
+                label
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(issue.suggestedFix.map { "\($0) Click to select." }
+                  ?? "Click to select.")
+        }
     }
 
     /// Errors first, then warnings, then notes.
