@@ -828,9 +828,20 @@ The technique is the one variable-font tools use for compatible outlines:
 3. **Reconcile segment counts** within each paired contour by inserting redundant on-curve points, splitting existing segments at parameters chosen to correspond across masters. This changes the path's description but not the shape it describes.
 4. **Align start points and direction** so contours traverse correspondingly.
 
-Two things follow that the specification should be honest about. Step 2 can fail: when a detail genuinely disappears at one weight there is no honest correspondence, and the right response is an export-blocking error naming the primitive, not a silently invented contour. And step 3 increases node counts — the exported path is larger than the minimal outline the solver produced. That is the price of interpolability and is worth paying, but validation should report it.
+Step 3 increases node counts — the exported path is larger than the minimal outline the solver produced. That is the price of interpolability and is worth paying, but validation should report it.
 
-> **Open Question:** Whether the SF Symbols app rejects mismatched masters outright, or accepts them and produces distorted intermediate weights, is not yet established. This decides whether §15 treats an unreconcilable master as an error or a warning. A round-trip through the real app settles it.
+#### Unreconcilable Masters Are Rejected Loudly
+
+Step 2 can fail. When a detail genuinely disappears at one weight there is no honest correspondence between the masters, and no amount of point insertion creates one. Griddy **rejects this outright**. It is an error, not a warning, and it is not bypassable: there is no "export anyway" for this case, because the resulting symbol would interpolate into visible garbage at the intermediate weights the designer never sees in Griddy.
+
+"Loudly" means four specific things, or the word is doing no work:
+
+1. **It blocks export.** Not a warning that scrolls past in a report.
+2. **It names the primitive**, not just the master. "Black master has one more contour than Regular" is not actionable; "Inner Counter closes at Black, leaving one fewer region than Regular" is.
+3. **It states what differs** — contour count, segment count, or correspondence — so the designer can see whether it is a real topology change or a solver artefact.
+4. **It appears before export is attempted.** An error that only surfaces when the designer hits Export has already let them cross the expensive boundary in their head. See §15.3: the cheap half of this check rides along with work Tier 2 already does.
+
+The usual cause is a detail that closes up at heavy weights, which is a design problem rather than a tooling one. The fix belongs in the artwork — thicken the counter, reduce the stroke expansion, add a per-master adjustment — and the message should say so.
 
 ### 12.7 Interpolation Preview
 
@@ -1107,7 +1118,9 @@ Layers to assign in SF Symbols
   subpath 5-7   Handle          fill
 ```
 
-This is the constructive form of the limitation. The format cannot carry the intent, but the `.griddy` document is a durable record of it (§6.1), and the export report can hand it back as instructions. It also gives the ordering guarantee above something concrete to be true of: the checklist is only correct if the ordering rules hold.
+The subpath numbering is shared: the SF Symbols app presents subpaths in the same order they appear in the path data, so "subpath 4" means the same thing in Griddy's report and in the app's own layer list. This is what makes the checklist usable rather than merely well-intentioned, and it is the second thing the ordering rules above exist to protect.
+
+This is the constructive form of the limitation. The format cannot carry the intent, but the `.griddy` document is a durable record of it (§6.1), and the export report can hand it back as instructions.
 
 The report should note when subpath count or order differs from the previous export of the same document, since that tells the designer the checklist has changed rather than merely repeated.
 
@@ -1150,12 +1163,22 @@ This category is deliberately small. Because constraints are invariants (§11.2)
 
 Reinstated. An earlier draft dropped this category on the assumption that Griddy authored every exported slot and nothing interpolated; §12.2 withdraws that.
 
+Split across two tiers, because the cheap half of the check predicts the expensive half:
+
+**Tier 2, continuous.** Tier 2 already resolves booleans at all three authored masters, so comparing the resulting contour counts costs nothing extra. A mismatch means reconciliation will fail, and saying so while the designer is still drawing is the whole point of §12.6's "appears before export is attempted".
+
+- Contour counts agree across the three masters.
+- No primitive resolves to a different number of regions at one weight than another.
+
+**Tier 3, at export.** The full reconciliation, which either succeeds or fails definitively.
+
 - The three masters reconcile to a shared path structure (§12.6).
-- Contour counts correspond across masters.
 - Segment counts and ordering match after reconciliation.
 - Start points and traversal direction correspond.
-- A master that cannot be reconciled is reported against the primitive responsible.
+- A master that cannot be reconciled is an **error**, blocking and not bypassable, reported against the primitive responsible (§12.6).
 - Node count added by reconciliation is reported, since it inflates the exported path beyond the minimal outline.
+
+The two tiers can disagree in one direction only: Tier 2 may pass while Tier 3 fails, since matching contour counts do not guarantee a correspondence can be found. Tier 2 failing while Tier 3 succeeds would be a bug.
 
 #### Visual Validation
 
@@ -1207,7 +1230,7 @@ A full validation pass implies boolean resolution at three masters, a reconcilia
 | Tier | When | Where | Checks |
 |---|---|---|---|
 | 1 | Every edit, synchronously | Main actor | Bounds, margins, zero-length segments, open/closed paths. Target under 1 ms. |
-| 2 | Debounced 250 ms after edits settle | Background | Boolean resolution at the three authored masters, visual center, optical bounds, raster previews, stroke collision, negative space. |
+| 2 | Debounced 250 ms after edits settle | Background | Boolean resolution at the three authored masters, contour-count agreement between them (§15.1), visual center, optical bounds, raster previews, stroke collision, negative space. |
 | 3 | Export only | Background | Three-master solve, outline compatibility pass, template structure validation, export report. |
 
 Rules:
@@ -1547,7 +1570,7 @@ Acceptance criteria:
 - Tier 2 results appear shortly after edits settle without stuttering the canvas.
 - User sees export-blocking errors before export.
 - Exported fixtures import successfully into Apple's SF Symbols app.
-- The §12.6 Open Question is resolved by actual round-trip: whether mismatched masters are rejected or silently distorted.
+- Exported masters reconcile, and an unreconcilable one blocks export loudly (§12.6).
 
 ## 20. Acceptance Criteria for MVP
 
@@ -1655,7 +1678,7 @@ Mitigation:
 
 - Keep importer/exporter isolated in `GriddySymbols`.
 - Preserve unknown SVG metadata where possible.
-- Resolve the §12.6 Open Question by real round-trip before Milestone 7 closes.
+- Verify by round-trip that reconciled masters interpolate cleanly in the SF Symbols app.
 - Treat Apple's SF Symbols app as the final compatibility authority.
 - Pin one template generation (§14.1) rather than guessing at compatibility across several.
 
