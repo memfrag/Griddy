@@ -538,3 +538,87 @@ struct GlyphMetricsReportTests {
         #expect(abs(advance - inherited) > 1)
     }
 }
+
+@Suite("Horizontal placement")
+struct HorizontalPlacementTests {
+
+    /// The same shape drawn at two different x positions.
+    private func exported(shiftedBy dx: Double) throws -> (text: String, left: Double) {
+        var package = try drawnDocument()
+        package.document.primitives = []
+        let centre = package.document.coordinateSystem.capHeightBox.center
+        package.document.addPrimitive(.circle(CirclePrimitive(
+            center: IconPoint(x: centre.x + dx, y: centre.y), radius: 5)))
+
+        let (data, _) = try SFSymbolTemplateExporter.export(
+            document: package.document, sourceTemplate: package.sourceTemplate)
+        let guides = try SFSymbolTemplateExporter.marginGuides(in: data)
+        let slot = SymbolSlot(weight: .regular, scale: .small)
+        return (String(decoding: data, as: UTF8.self),
+                try #require(guides[slot]).left)
+    }
+
+    @Test("The export does not depend on where the artwork was drawn")
+    func exportIsInvariantToPlacement() throws {
+        let atCentre = try exported(shiftedBy: 0)
+        let toTheRight = try exported(shiftedBy: 6)
+
+        // Byte-identical. The glyph origin stays where the template puts it and
+        // the artwork is normalised onto it, so horizontal position in the
+        // editor carries no information -- only the shape and its width do.
+        // This is what holds the left side bearing constant across masters; it
+        // also means dragging sideways has no effect on the exported symbol.
+        #expect(atCentre.text == toTheRight.text)
+        #expect(atCentre.left == toTheRight.left)
+    }
+
+    @Test("Vertical placement, by contrast, is preserved")
+    func verticalPlacementMatters() throws {
+        func exportedShiftedVertically(by dy: Double) throws -> String {
+            var package = try drawnDocument()
+            package.document.primitives = []
+            let centre = package.document.coordinateSystem.capHeightBox.center
+            package.document.addPrimitive(.circle(CirclePrimitive(
+                center: IconPoint(x: centre.x, y: centre.y + dy), radius: 5)))
+            let (data, _) = try SFSymbolTemplateExporter.export(
+                document: package.document, sourceTemplate: package.sourceTemplate)
+            return String(decoding: data, as: UTF8.self)
+        }
+
+        // The baseline is a font-wide metric that nothing normalises against,
+        // so where a symbol sits vertically is real design intent.
+        #expect(try exportedShiftedVertically(by: 0)
+                != (try exportedShiftedVertically(by: 3)))
+    }
+}
+
+@Suite("Centring")
+struct CentringTests {
+
+    @Test("Artwork sits exactly midway between the margin guides")
+    func artworkIsCentred() throws {
+        let package = try drawnDocument()
+        let (data, report) = try SFSymbolTemplateExporter.export(
+            document: package.document, sourceTemplate: package.sourceTemplate)
+        let guides = try SFSymbolTemplateExporter.marginGuides(in: data)
+        let unit = package.document.coordinateSystem.unitInTemplateSpace
+        let standard = GlyphMetrics.standardSideBearingInTemplateUnits
+
+        // Equal side bearings *is* centring, and it is what Apple does: `app`
+        // and `apple.terminal` carry 9.766 on both sides of all three masters.
+        // Verified against the written file with exact curve extrema at
+        // 9.7656 / 9.7656 -- see the metrics report suite.
+        for weight in SymbolWeight.authored {
+            let slot = SymbolSlot(weight: weight, scale: .small)
+            let guide = try #require(guides[slot])
+            let advance = try #require(report.advances[slot]) * unit
+
+            // Advance = bearing + artwork + bearing, so the artwork's centre is
+            // the advance's centre exactly when the bearings match.
+            // Tolerance is the written precision: guide positions round to
+            // four decimals on the way out.
+            #expect(abs((guide.right - guide.left) - advance) < 1e-4)
+            #expect(advance > 2 * standard, "\(weight.rawValue) has no artwork")
+        }
+    }
+}

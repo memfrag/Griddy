@@ -44,14 +44,30 @@ public enum SVGPathWriter {
 
     /// Formats a coordinate without trailing zeros, so paths stay compact and
     /// compare cleanly between exports.
+    ///
+    /// `precision` counts *decimal places*, not significant digits. It used to
+    /// round to four decimals and then format with `%.4g`, which is four
+    /// significant digits — so a margin guide at x = 1210.34 was written as
+    /// "1210", rounded to the nearest whole template unit. That is what made
+    /// exported side bearings scatter by up to half a unit around the 9.7656
+    /// they were computed as, and it applied to every coordinate large enough
+    /// to spend its four digits on the integer part.
     private static func number(_ value: Double, _ precision: Int) -> String {
-        let rounded = (value * pow(10, Double(precision))).rounded()
-            / pow(10, Double(precision))
+        let scale = pow(10, Double(precision))
+        let rounded = (value * scale).rounded() / scale
 
         if rounded == rounded.rounded(), abs(rounded) < 1e15 {
             return String(Int(rounded))
         }
-        return String(format: "%.\(precision)g", rounded)
+
+        var text = String(format: "%.\(precision)f", rounded)
+        while text.hasSuffix("0") {
+            text.removeLast()
+        }
+        if text.hasSuffix(".") {
+            text.removeLast()
+        }
+        return text
     }
 }
 
