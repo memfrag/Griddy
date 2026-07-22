@@ -225,14 +225,24 @@ public struct ImportedPathPrimitive: Codable, Hashable, Sendable, Identifiable {
     /// put it back where it belongs.
     public var sourceElementID: String?
 
+    /// The extent of the path data.
+    ///
+    /// Recorded at import because this module has no SVG parser and cannot
+    /// derive it later. Without it an imported path has no bounds, which makes
+    /// it unselectable and invisible to anything that needs to know where the
+    /// artwork is.
+    public var bounds: IconRect?
+
     public init(id: PrimitiveID = PrimitiveID(),
                 attributes: PrimitiveAttributes = .default,
                 pathData: String,
-                sourceElementID: String? = nil) {
+                sourceElementID: String? = nil,
+                bounds: IconRect? = nil) {
         self.id = id
         self.attributes = attributes
         self.pathData = pathData
         self.sourceElementID = sourceElementID
+        self.bounds = bounds
     }
 }
 

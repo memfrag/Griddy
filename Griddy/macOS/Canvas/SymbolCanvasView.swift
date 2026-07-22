@@ -59,12 +59,12 @@ struct SymbolCanvasView: View {
             // so it does not mutate state during view update.
             Task { @MainActor in lastCanvasSize = size }
         }
-        return CanvasTransform(fitting: document.coordinateSystem.canvasBounds,
+        return CanvasTransform(fitting: document.visibleBounds,
                                in: size)
     }
 
     private var transform: CanvasTransform {
-        CanvasTransform(fitting: document.coordinateSystem.canvasBounds,
+        CanvasTransform(fitting: document.visibleBounds,
                         in: lastCanvasSize)
     }
 

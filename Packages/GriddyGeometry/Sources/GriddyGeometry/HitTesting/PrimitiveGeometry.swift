@@ -159,7 +159,11 @@ public enum PrimitiveGeometry {
         case .symmetricPath(let path):
             bounds(containing: path.points + path.mirroredPoints)
 
-        case .compound, .importedPath:
+        case .importedPath(let imported):
+            // Recorded at import, since this module cannot parse path data.
+            imported.bounds
+
+        case .compound:
             nil
         }
     }

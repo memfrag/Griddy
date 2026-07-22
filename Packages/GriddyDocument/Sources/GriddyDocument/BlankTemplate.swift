@@ -22,16 +22,16 @@ extension TemplateMetrics {
     ///   that the numbers are now real, so a new document has the same
     ///   coordinate system as an imported one.
     public static let blankTemplate = TemplateMetrics(
-        baselineY: 95.215,
-        caplineY: 24.756,
-        leftMarginX: 241.815,
+        baselineY: 696,
+        caplineY: 625.541,
+        leftMarginX: 1391.2,
         alignmentRects: [
-            .small: TemplateRect(x: 241.815, y: 24.756,
-                                 width: 109.792, height: 70.459),
-            .medium: TemplateRect(x: 241.815, y: 454.755,
-                                  width: 109.792, height: 70.460),
-            .large: TemplateRect(x: 241.815, y: 884.755,
-                                 width: 109.792, height: 70.460)
+            .small: TemplateRect(x: 1391.2, y: 625.541,
+                                 width: 117.29, height: 70.459),
+            .medium: TemplateRect(x: 1391.2, y: 1055.541,
+                                  width: 117.29, height: 70.459),
+            .large: TemplateRect(x: 1391.2, y: 1485.541,
+                                 width: 117.29, height: 70.459)
         ]
     )
 

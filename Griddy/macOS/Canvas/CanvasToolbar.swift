@@ -5,6 +5,7 @@
 import SwiftUI
 import GriddyGeometry
 import GriddyDocument
+import GriddySymbols
 
 /// The tool palette and canvas controls. See spec 8.5.
 struct CanvasToolbar: ToolbarContent {
@@ -90,6 +91,14 @@ struct EditCommands: Commands {
         // "Select All", which AppKit already contributes to the Edit menu for
         // text contexts. Two identically-named items in one menu is worse than
         // slightly longer names.
+        CommandGroup(after: .importExport) {
+            Button("Import SF Symbols Template…") {
+                importTemplate()
+            }
+            .keyboardShortcut("i", modifiers: [.command, .shift])
+            .disabled(file == nil)
+        }
+
         CommandGroup(after: .pasteboard) {
             Button("Delete Selection") {
                 delete()
@@ -112,6 +121,53 @@ struct EditCommands: Commands {
 
             Divider()
         }
+    }
+
+    /// Picks a template and imports it into the focused document.
+    ///
+    /// Uses an `NSOpenPanel` directly rather than `.fileImporter`, because the
+    /// action originates in a menu command that has no view to attach a
+    /// modifier to.
+    private func importTemplate() {
+        guard let file else {
+            return
+        }
+
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.svg]
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose an SVG exported from the SF Symbols app."
+        panel.prompt = "Import"
+
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return
+        }
+
+        do {
+            let package = try SFSymbolTemplateImporter.importDocument(
+                Data(contentsOf: url),
+                appVersion: Bundle.main.appVersionString
+            )
+            file.replaceContents(with: package, undoManager: undoManager ?? nil)
+            editor?.selection = []
+        } catch {
+            present(ImportFailure(error))
+        }
+    }
+
+    /// Reports a refusal as an alert.
+    ///
+    /// Strictness only reads as deliberate if the refusal explains itself and
+    /// says what to do about it. See spec 14.1.
+    private func present(_ failure: ImportFailure) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = failure.title
+        alert.informativeText = [failure.message, failure.suggestion]
+            .compactMap { $0 }
+            .joined(separator: "\n\n")
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 
     private func delete() {

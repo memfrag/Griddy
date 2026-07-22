@@ -54,16 +54,36 @@ public enum SFSymbolTemplateImporter {
     public static func `import`(_ data: Data) throws -> SFSymbolTemplate {
         let root = try SVGParser.parse(data)
 
-        guard let symbolsGroup = root.firstDescendant(withID: "Symbols") else {
+        // Both groups are captured with the transform accumulated from their
+        // ancestors. Templates nest them inside wrapper groups that carry
+        // transforms of their own, and losing those puts every coordinate --
+        // artwork and guides alike -- in the wrong place.
+        var symbols: (element: SVGElement, transform: SVGTransform)?
+        var guides: (element: SVGElement, transform: SVGTransform)?
+
+        root.walk { element, transform in
+            switch element.id {
+            case "Symbols" where symbols == nil:
+                symbols = (element, transform)
+            case "Guides" where guides == nil:
+                guides = (element, transform)
+            default:
+                break
+            }
+        }
+
+        guard let symbols else {
             throw TemplateImportError.missingGroup("Symbols")
         }
-        guard let guidesGroup = root.firstDescendant(withID: "Guides") else {
+        guard let guides else {
             throw TemplateImportError.missingGroup("Guides")
         }
 
         let version = try version(in: root)
-        let variants = try variants(in: symbolsGroup)
-        let metrics = try metrics(in: guidesGroup, variants: variants)
+        let variants = try variants(in: symbols.element, inherited: symbols.transform)
+        let metrics = try metrics(in: guides.element,
+                                  inherited: guides.transform,
+                                  variants: variants)
 
         // Three slots is the authoring template the SF Symbols app hands you to
         // draw a custom symbol; 27 is a static export of an existing one.
@@ -111,42 +131,87 @@ public enum SFSymbolTemplateImporter {
         return found
     }
 
+    /// Groups that are template structure rather than the symbol itself.
+    private static let structuralGroupIDs: Set<String> = [
+        "Notes", "Guides", "Symbols", "Group", "Margins"
+    ]
+
     private static func symbolName(in root: SVGElement) -> String {
-        root.children.first { $0.name == "title" }?.allText
-            ?? root.children.first { $0.name == "g" }?.id
-            ?? "Untitled"
+        if let title = root.children.first(where: { $0.name == "title" })?.allText,
+           !title.isEmpty {
+            return title
+        }
+
+        // The authoring template wraps everything in a group named after the
+        // symbol. A static export has no such wrapper, so the first group is
+        // "Notes" -- naming a document after it would be plainly wrong, and is
+        // what happened before this check existed.
+        if let named = root.children.first(where: {
+            $0.name == "g" && $0.id.map { !structuralGroupIDs.contains($0) } == true
+        })?.id {
+            return named
+        }
+
+        return "Untitled"
+    }
+
+    /// The scale the document is built from.
+    ///
+    /// Metrics and artwork must come from the *same* scale: deriving the
+    /// coordinate system from the Medium guides and then importing the Small
+    /// artwork places the geometry against the wrong baseline and puts it off
+    /// canvas entirely.
+    static func canonicalScale(for variants: [SymbolSlot: SFSymbolVariant]) -> SymbolScale {
+        let populated = variants.filter { !$0.value.commands.isEmpty }
+        let scales = Set((populated.isEmpty ? variants : populated).keys.map(\.scale))
+
+        // Prefer Medium when the template offers it; an authoring template only
+        // has Small, which is then the only honest choice.
+        if scales.contains(.medium) { return .medium }
+        if scales.contains(.small) { return .small }
+        return scales.first ?? .small
     }
 
     // MARK: Variants
 
-    static func variants(in symbols: SVGElement) throws -> [SymbolSlot: SFSymbolVariant] {
+    static func variants(in symbols: SVGElement,
+                         inherited: SVGTransform = .identity)
+    throws -> [SymbolSlot: SFSymbolVariant] {
         var found: [SymbolSlot: SFSymbolVariant] = [:]
 
-        for element in symbols.descendants(where: { $0.name == "g" }) {
+        symbols.walk(withEffectiveTransform: inherited) { element, transform in
             guard let id = element.id, let slot = slot(fromElementID: id) else {
-                continue
-            }
-            // Every path in the group, not just the first. The templates seen
-            // so far carry one path per variant with the artwork as subpaths
-            // inside it, but a group holding several would render as their
-            // union, and reading only the first would silently drop geometry.
-            let data = element
-                .descendants { $0.name == "path" }
-                .compactMap { $0.attributes["d"] }
-                .joined(separator: " ")
-
-            guard !data.isEmpty else {
-                continue
+                return
             }
 
+            // Every path in the group, not just the first, and each carrying
+            // its own accumulated transform: templates position variants with
+            // a group transform and keep the path data in local coordinates,
+            // so untransformed data lands nowhere near the canvas.
+            var commands: [SVGPathCommand] = []
+            element.walk(withEffectiveTransform: transform) { child, childTransform in
+                guard child.name == "path", let data = child.attributes["d"],
+                      let parsed = try? SVGPathData.parse(data) else {
+                    return
+                }
+                commands.append(contentsOf: parsed.map { command in
+                    command.mapped { childTransform.apply(to: $0) }
+                })
+            }
+
+            // An empty slot is meaningful, not a failure: a blank template has
+            // the slot groups in place with no artwork in them, and that is
+            // exactly what a new document starts from. See spec 7.1.
             found[slot] = SFSymbolVariant(
                 slot: slot,
                 elementID: id,
-                pathData: data,
-                commands: (try? SVGPathData.parse(data)) ?? []
+                pathData: SVGPathWriter.write(commands),
+                commands: commands
             )
         }
 
+        // What must be present is the slots themselves. A file with no slot
+        // groups at all is not a symbol template.
         guard !found.isEmpty else {
             throw TemplateImportError.noVariants
         }
@@ -176,61 +241,130 @@ public enum SFSymbolTemplateImporter {
     // MARK: Metrics
 
     static func metrics(in guides: SVGElement,
+                        inherited: SVGTransform,
                         variants: [SymbolSlot: SFSymbolVariant]) throws -> TemplateMetrics {
-        // Derive from the scale the artwork actually occupies. An authoring
-        // template holds its masters at Small; a populated one has all three.
-        let scale = variants.keys.map(\.scale).contains(.medium) ? "M" : "S"
+        // Same scale the artwork is taken from, or the geometry lands against
+        // the wrong baseline.
+        let suffix = scaleSuffix(canonicalScale(for: variants))
 
-        guard let baseline = guideY(in: guides, id: "Baseline-\(scale)") else {
-            throw TemplateImportError.missingGuide("Baseline-\(scale)")
+        guard let baseline = guideY(in: guides, id: "Baseline-\(suffix)",
+                                    inherited: inherited) else {
+            throw TemplateImportError.missingGuide("Baseline-\(suffix)")
         }
-        guard let capline = guideY(in: guides, id: "Capline-\(scale)") else {
-            throw TemplateImportError.missingGuide("Capline-\(scale)")
+        guard let capline = guideY(in: guides, id: "Capline-\(suffix)",
+                                   inherited: inherited) else {
+            throw TemplateImportError.missingGuide("Capline-\(suffix)")
         }
         guard abs(baseline - capline) > 1e-9 else {
             throw TemplateImportError.degenerateMetrics
         }
 
-        let leftMargin = marginX(in: guides, edge: "left")
-            ?? guides.descendants { $0.name == "line" }
-                .compactMap { $0.double("x1") }.min()
-            ?? 0
+        // The margin belongs to the specific slot the artwork comes from. The
+        // template lays the masters out side by side, so each has its own
+        // horizontal origin; taking the leftmost across all of them would
+        // offset the artwork by the distance between two masters.
+        let leftMargin = marginX(in: guides, edge: "left",
+                                 suffix: suffix, inherited: inherited) ?? 0
 
         return TemplateMetrics(
             baselineY: baseline,
             caplineY: capline,
             leftMarginX: leftMargin,
-            alignmentRects: alignmentRects(in: guides)
+            alignmentRects: alignmentRects(in: guides, inherited: inherited)
         )
     }
 
-    private static func guideY(in guides: SVGElement, id: String) -> Double? {
-        guides.firstDescendant(withID: id)?.double("y1")
+    static func scaleSuffix(_ scale: SymbolScale) -> String {
+        switch scale {
+        case .small: "S"
+        case .medium: "M"
+        case .large: "L"
+        }
     }
 
-    /// The margin guide for whichever slot the template happens to annotate.
+    /// A guide line's Y position in template space.
     ///
-    /// An authoring template marks margins for each authored master; a static
-    /// export marks only one. Taking the leftmost avoids depending on which.
-    private static func marginX(in guides: SVGElement, edge: String) -> Double? {
-        let candidates = guides
-            .descendants { $0.id?.hasPrefix("\(edge)-margin-") == true }
-            .compactMap { $0.double("x1") }
+    /// Guides sit inside transformed groups just as artwork does, so the raw
+    /// `y1` attribute is a local coordinate. Reading it directly gives a
+    /// baseline in the wrong place, and every coordinate derived from it is
+    /// then wrong by the same amount.
+    static func guideY(in guides: SVGElement,
+                       id: String,
+                       inherited: SVGTransform = .identity) -> Double? {
+        var result: Double?
+        guides.walk(withEffectiveTransform: inherited) { element, transform in
+            guard result == nil, element.id == id,
+                  let x = element.double("x1"), let y = element.double("y1") else {
+                return
+            }
+            result = transform.apply(to: IconPoint(x: x, y: y)).y
+        }
+        return result
+    }
+
+    /// A guide line's X position in template space.
+    static func guideX(in guides: SVGElement,
+                       id: String,
+                       inherited: SVGTransform = .identity) -> Double? {
+        var result: Double?
+        guides.walk(withEffectiveTransform: inherited) { element, transform in
+            guard result == nil, element.id == id,
+                  let x = element.double("x1"), let y = element.double("y1") else {
+                return
+            }
+            result = transform.apply(to: IconPoint(x: x, y: y)).x
+        }
+        return result
+    }
+
+    /// The margin guide belonging to the Regular master at a given scale.
+    ///
+    /// Falls back to any margin at that scale, then to any margin at all, so a
+    /// template that annotates a different master still yields an origin.
+    static func marginX(in guides: SVGElement,
+                        edge: String,
+                        suffix: String,
+                        inherited: SVGTransform) -> Double? {
+        if let exact = guideX(in: guides,
+                              id: "\(edge)-margin-Regular-\(suffix)",
+                              inherited: inherited) {
+            return exact
+        }
+
+        var candidates: [Double] = []
+        guides.walk(withEffectiveTransform: inherited) { element, transform in
+            guard let id = element.id,
+                  id.hasPrefix("\(edge)-margin-"),
+                  id.hasSuffix("-\(suffix)"),
+                  let x = element.double("x1"), let y = element.double("y1") else {
+                return
+            }
+            candidates.append(transform.apply(to: IconPoint(x: x, y: y)).x)
+        }
+
+        guard !candidates.isEmpty else {
+            return nil
+        }
         return edge == "left" ? candidates.min() : candidates.max()
     }
 
-    private static func alignmentRects(in guides: SVGElement) -> [SymbolScale: TemplateRect] {
+    private static func alignmentRects(in guides: SVGElement,
+                                       inherited: SVGTransform)
+    -> [SymbolScale: TemplateRect] {
         var rects: [SymbolScale: TemplateRect] = [:]
 
-        for (scale, suffix) in [(SymbolScale.small, "S"),
-                                (.medium, "M"),
-                                (.large, "L")] {
-            guard let baseline = guideY(in: guides, id: "Baseline-\(suffix)"),
-                  let capline = guideY(in: guides, id: "Capline-\(suffix)") else {
+        for scale in SymbolScale.allCases {
+            let suffix = scaleSuffix(scale)
+            guard let baseline = guideY(in: guides, id: "Baseline-\(suffix)",
+                                        inherited: inherited),
+                  let capline = guideY(in: guides, id: "Capline-\(suffix)",
+                                       inherited: inherited) else {
                 continue
             }
-            let left = marginX(in: guides, edge: "left") ?? 0
-            let right = marginX(in: guides, edge: "right") ?? left
+            let left = marginX(in: guides, edge: "left",
+                               suffix: suffix, inherited: inherited) ?? 0
+            let right = marginX(in: guides, edge: "right",
+                                suffix: suffix, inherited: inherited) ?? left
             rects[scale] = TemplateRect(x: left,
                                         y: min(baseline, capline),
                                         width: max(0, right - left),

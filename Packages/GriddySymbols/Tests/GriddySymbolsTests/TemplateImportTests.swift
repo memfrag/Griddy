@@ -192,9 +192,12 @@ struct AuthoringTemplateTests {
     func metrics() throws {
         let template = try SFSymbolTemplateImporter.import(Fixture.authoring)
 
-        // Measured from the file: Baseline-S 95.215, Capline-S 24.756.
-        #expect(approximately(template.metrics.baselineY, 95.215))
-        #expect(approximately(template.metrics.caplineY, 24.756))
+        // In template space, after the Guides group's own translate. The raw
+        // attributes read 95.215 and 24.756; the group is translated by
+        // (263, 600.785), so the baseline actually sits at 696 -- which is
+        // exactly where the static export writes its Baseline-S outright.
+        #expect(approximately(template.metrics.baselineY, 696))
+        #expect(approximately(template.metrics.caplineY, 625.541))
         #expect(approximately(template.metrics.capHeight, 70.459))
     }
 
@@ -209,9 +212,9 @@ struct AuthoringTemplateTests {
 
         // The origin maps to the baseline, and 16u up to the capline.
         let origin = system.templatePoint(from: .zero)
-        #expect(approximately(origin.y, 95.215))
+        #expect(approximately(origin.y, 696))
         let capline = system.templatePoint(from: IconPoint(x: 0, y: 16))
-        #expect(approximately(capline.y, 24.756))
+        #expect(approximately(capline.y, 625.541))
     }
 
     @Test("Artwork is parsed but left as imported path data")

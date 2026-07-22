@@ -96,15 +96,30 @@ final class SymbolDocumentFile: ReferenceFileDocument {
 
     /// Creates an empty document.
     ///
-    /// New Symbol and Import Template share one path: the coordinate system is
-    /// always template-derived, never synthesised. See spec 7.1.
+    /// New Symbol and Import Template share one path: the bundled blank
+    /// template goes through the same importer as any other file, so the
+    /// coordinate system is always template-derived rather than synthesised.
+    /// See spec 7.1.
     init() {
-        let document = SymbolDocument.new(
-            name: "Untitled",
-            templateMetrics: .blankTemplate,
-            appVersion: Bundle.main.appVersionString
-        )
-        storage = PackageStorage(SymbolDocumentPackage(document: document))
+        storage = PackageStorage(TemplateImport.newDocumentPackage())
+    }
+
+    /// Replaces this document's contents with an imported template.
+    ///
+    /// Importing into the open document rather than opening a second one keeps
+    /// the undo stack meaningful: the import is an edit, and one undo puts the
+    /// previous work back.
+    func replaceContents(with package: SymbolDocumentPackage,
+                         undoManager: UndoManager?) {
+        let before = self.package
+        self.package = package
+        undoManager?.registerUndo(withTarget: self) { target in
+            MainActor.assumeIsolated {
+                target.replaceContents(with: before, undoManager: undoManager)
+            }
+        }
+        undoManager?.setActionName("Import Template")
+        noteUndoStackChanged()
     }
 
     nonisolated init(configuration: ReadConfiguration) throws {

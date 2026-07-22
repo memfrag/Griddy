@@ -5,6 +5,7 @@
 import SwiftUI
 import GriddyGeometry
 import GriddyDocument
+import GriddySymbols
 
 /// Draws the artwork layer: primitives, the in-flight drag preview, and
 /// selection affordances. See spec 8.3.
@@ -37,6 +38,14 @@ struct ArtworkLayerRenderer {
     /// operations, which is where the solver matters. See spec 10.5.
     private func drawFill(_ primitive: IconPrimitive,
                           in context: inout GraphicsContext) {
+        // Imported artwork is already a filled outline, not a centerline, so it
+        // is drawn as it arrived rather than being run through the outliner.
+        // Nothing about it is reinterpreted. See spec 14.3.
+        if case .importedPath(let imported) = primitive {
+            drawImported(imported, in: &context)
+            return
+        }
+
         let width = document.strokeWidth(for: primitive, weight: editor.activeWeight)
 
         guard let outline = Outliner.outline(primitive, width: width),
@@ -52,6 +61,37 @@ struct ArtworkLayerRenderer {
         // Non-zero winding, because the outliner orients outer boundaries
         // counterclockwise and holes clockwise. Even-odd would fill a ring's
         // hole whenever another contour happened to overlap it.
+        context.fill(path, with: .color(.artwork), style: FillStyle(eoFill: false))
+    }
+
+    /// Fills imported path data exactly as it was imported.
+    private func drawImported(_ imported: ImportedPathPrimitive,
+                              in context: inout GraphicsContext) {
+        guard let commands = try? SVGPathData.parse(imported.pathData) else {
+            return
+        }
+
+        var path = Path()
+        for command in commands {
+            switch command {
+            case .move(let to):
+                path.move(to: transform.point(to))
+            case .line(let to):
+                path.addLine(to: transform.point(to))
+            case .cubic(let control1, let control2, let to):
+                path.addCurve(to: transform.point(to),
+                              control1: transform.point(control1),
+                              control2: transform.point(control2))
+            case .close:
+                path.closeSubpath()
+            }
+        }
+
+        guard !path.isEmpty else {
+            return
+        }
+        // Non-zero, matching how the source template's own fill-rule reads, so
+        // counters stay open.
         context.fill(path, with: .color(.artwork), style: FillStyle(eoFill: false))
     }
 

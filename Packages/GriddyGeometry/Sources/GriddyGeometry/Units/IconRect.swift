@@ -40,6 +40,15 @@ public struct IconRect: Codable, Hashable, Sendable {
         point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY
     }
 
+    /// The smallest rectangle containing both.
+    public func union(_ other: IconRect) -> IconRect {
+        let minX = Swift.min(self.minX, other.minX)
+        let minY = Swift.min(self.minY, other.minY)
+        let maxX = Swift.max(self.maxX, other.maxX)
+        let maxY = Swift.max(self.maxY, other.maxY)
+        return IconRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+
     /// The rectangle inset on every edge by `amount`.
     ///
     /// A negative amount outsets. The result is clamped to zero extent rather

@@ -116,6 +116,25 @@ extension SymbolDocument {
         return ordered
     }
 
+    /// Everything that should be visible, canvas and artwork together.
+    ///
+    /// The 16-unit canvas is a typographic reference spanning baseline to
+    /// capline, not a bounding box: real SF Symbols artwork routinely exceeds
+    /// it, measuring 20.5 and 27.3 units tall in the two templates examined.
+    /// Fitting the view to the canvas alone would push imported artwork off
+    /// screen. See spec 9.1.
+    public var visibleBounds: IconRect {
+        var result = coordinateSystem.canvasBounds
+
+        for primitive in primitivesInDrawOrder {
+            guard let bounds = PrimitiveGeometry.bounds(of: primitive) else {
+                continue
+            }
+            result = result.union(bounds)
+        }
+        return result
+    }
+
     /// Whether a primitive can be selected and edited.
     public func isEditable(_ primitiveID: PrimitiveID) -> Bool {
         guard let layer = layer(containing: primitiveID) else {

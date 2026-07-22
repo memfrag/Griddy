@@ -11,12 +11,13 @@ let package = Package(
         .library(name: "GriddySymbols", targets: ["GriddySymbols"])
     ],
     dependencies: [
-        .package(path: "../GriddyGeometry")
+        .package(path: "../GriddyGeometry"),
+        .package(path: "../GriddyDocument")
     ],
     targets: [
         .target(
             name: "GriddySymbols",
-            dependencies: ["GriddyGeometry"],
+            dependencies: ["GriddyGeometry", "GriddyDocument"],
             swiftSettings: [
                 .defaultIsolation(nil)
             ]
