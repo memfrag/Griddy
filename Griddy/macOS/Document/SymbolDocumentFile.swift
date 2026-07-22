@@ -10,10 +10,27 @@ import GriddyGeometry
 extension UTType {
 
     /// The `.griddy` document package type, declared in Info.plist.
-    ///
-    /// Marked `nonisolated` so the document type is reachable from the
-    /// non-isolated save path below.
     nonisolated static let griddySymbol = UTType(exportedAs: "pizza.martin.griddy.symbol")
+}
+
+/// Thread-safe storage for the document package.
+///
+/// Exists because SwiftUI serialises documents off the main actor: autosave
+/// calls `snapshot(contentType:)` from a background dispatch queue while the
+/// UI reads and writes the same value on the main actor.
+private nonisolated final class PackageStorage: @unchecked Sendable {
+
+    private let lock = NSLock()
+    nonisolated(unsafe) private var storedValue: SymbolDocumentPackage
+
+    init(_ value: SymbolDocumentPackage) {
+        storedValue = value
+    }
+
+    var value: SymbolDocumentPackage {
+        get { lock.withLock { storedValue } }
+        set { lock.withLock { storedValue = newValue } }
+    }
 }
 
 /// The SwiftUI document wrapper around a ``SymbolDocumentPackage``.
@@ -22,24 +39,55 @@ extension UTType {
 /// are semantic commands registered with an `UndoManager`, and gesture-scoped
 /// undo grouping needs a stable reference to register against. See spec 16.4.
 ///
-/// Isolation is worth explaining. The app target builds with
-/// `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, so this class is main-actor
-/// isolated, which is what the document's observable state wants. But
-/// `ReferenceFileDocument` is a `@preconcurrency` protocol that also requires
-/// `Sendable`, because SwiftUI takes a snapshot on the main actor and may then
-/// serialise it elsewhere. The split below reflects that split exactly:
-/// ``snapshot(contentType:)`` reads `self` and stays isolated, while
-/// ``fileWrapper(snapshot:configuration:)`` touches only its parameters and is
-/// explicitly `nonisolated`.
+/// **Isolation.** The app target builds with
+/// `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, which suits the observable
+/// state this class publishes to the UI. But `ReferenceFileDocument` requires
+/// `Sendable` and SwiftUI calls **both** serialisation entry points off the
+/// main actor during autosave -- `snapshot(contentType:)` as well as
+/// `fileWrapper(snapshot:configuration:)`. Every protocol requirement is
+/// therefore explicitly `nonisolated`, and the package lives behind a lock so
+/// those off-main reads are safe.
+///
+/// Do not "simplify" this by dropping `nonisolated` and relying on a
+/// `@preconcurrency` conformance instead: that compiles, runs fine until the
+/// document is first edited, and then traps inside `snapshot(contentType:)` on
+/// `com.apple.root.default-qos` the moment autosave fires.
 @MainActor
-final class SymbolDocumentFile: @preconcurrency ReferenceFileDocument {
+final class SymbolDocumentFile: ReferenceFileDocument {
 
     typealias Snapshot = SymbolDocumentPackage
 
     nonisolated static let readableContentTypes: [UTType] = [.griddySymbol]
     nonisolated static let writableContentTypes: [UTType] = [.griddySymbol]
 
-    @Published var package: SymbolDocumentPackage
+    private let storage: PackageStorage
+
+    /// Bumped every time an undo step is registered.
+    ///
+    /// Exists so views can depend on the undo stack changing. `UndoManager` is
+    /// not observable, and registering a step does not necessarily mutate the
+    /// document -- committing a drag registers undo without changing anything,
+    /// because the drag already applied its edits. Without this, anything
+    /// derived from the undo stack would be captured before registration and
+    /// then stay stale.
+    @Published private(set) var undoRevision: Int = 0
+
+    func noteUndoStackChanged() {
+        undoRevision &+= 1
+    }
+
+    /// The document package.
+    ///
+    /// Backed by lock-protected storage rather than `@Published`, so it can be
+    /// read from the serialisation queue. Change notification is published
+    /// manually on write.
+    var package: SymbolDocumentPackage {
+        get { storage.value }
+        set {
+            objectWillChange.send()
+            storage.value = newValue
+        }
+    }
 
     var document: SymbolDocument {
         get { package.document }
@@ -56,21 +104,24 @@ final class SymbolDocumentFile: @preconcurrency ReferenceFileDocument {
             templateMetrics: .provisionalBlankTemplate,
             appVersion: Bundle.main.appVersionString
         )
-        self.package = SymbolDocumentPackage(document: document)
+        storage = PackageStorage(SymbolDocumentPackage(document: document))
     }
 
-    init(configuration: ReadConfiguration) throws {
-        package = try SymbolDocumentPackage.read(from: configuration.file)
+    nonisolated init(configuration: ReadConfiguration) throws {
+        storage = PackageStorage(try SymbolDocumentPackage.read(from: configuration.file))
     }
 
-    func snapshot(contentType: UTType) throws -> SymbolDocumentPackage {
-        package
+    /// Captures the state to serialise.
+    ///
+    /// Called off the main actor during autosave.
+    nonisolated func snapshot(contentType: UTType) throws -> SymbolDocumentPackage {
+        storage.value
     }
 
     /// Serialises a snapshot.
     ///
-    /// Deliberately touches nothing on `self`, which is what makes running this
-    /// off the main actor safe.
+    /// Touches only its parameters, which is what makes running this off the
+    /// main actor safe.
     nonisolated func fileWrapper(snapshot: SymbolDocumentPackage,
                                  configuration: WriteConfiguration) throws -> FileWrapper {
         var snapshot = snapshot

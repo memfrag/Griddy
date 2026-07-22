@@ -12,10 +12,41 @@ import GriddyDocument
 /// Constraints, Master, Export) arrive with primitive editing. See spec 8.6.
 struct DocumentInspector: View {
 
-    let document: SymbolDocument
+    @ObservedObject var file: SymbolDocumentFile
+    @Bindable var editor: CanvasEditor
     let selection: SidebarSelection?
 
+    private var document: SymbolDocument {
+        file.document
+    }
+
     var body: some View {
+        if let primitive = selectedPrimitive {
+            PrimitiveInspector(file: file, editor: editor, primitive: primitive)
+        } else if editor.selection.count > 1 {
+            multipleSelection
+        } else {
+            documentProperties
+        }
+    }
+
+    /// The single selected primitive, if exactly one is selected.
+    private var selectedPrimitive: IconPrimitive? {
+        guard editor.selection.count == 1, let id = editor.selection.first else {
+            return nil
+        }
+        return document.primitive(withID: id)
+    }
+
+    private var multipleSelection: some View {
+        ContentUnavailableView {
+            Label("\(editor.selection.count) Primitives", systemImage: "square.on.square")
+        } description: {
+            Text("Select a single primitive to edit its properties.")
+        }
+    }
+
+    private var documentProperties: some View {
         Form {
             Section("Coordinate System") {
                 row("Unit", value: "cap ÷ 16")

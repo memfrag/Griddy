@@ -21,6 +21,7 @@ struct DocumentWindow: Scene {
             AboutCommand()
             CheckForUpdatesCommand(updater: updater)
             SidebarCommands()
+            EditCommands()
             HelpCommands()
         }
     }
@@ -33,6 +34,8 @@ private struct DocumentWindowContent: View {
     @ObservedObject var file: SymbolDocumentFile
     @State private var selection: SidebarSelection? = .symbol
     @State private var isInspectorPresented = true
+    @State private var editor = CanvasEditor()
+    @Environment(\.undoManager) private var undoManager
 
     /// Explicit rather than left to SwiftUI's discretion, so the sidebar's
     /// visibility is deterministic instead of something the split view may
@@ -59,18 +62,19 @@ private struct DocumentWindowContent: View {
             // minimums, and never introduce a VSplitView or a nested
             // NavigationSplitView here.
             VStack(spacing: 0) {
-                SymbolCanvasView(document: file.document)
+                SymbolCanvasView(file: file, editor: editor)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 Divider()
                 BottomStrip(document: file.document)
             }
         }
         .inspector(isPresented: $isInspectorPresented) {
-            DocumentInspector(document: file.document, selection: selection)
+            DocumentInspector(file: file, editor: editor, selection: selection)
                 .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
         }
         .navigationTitle(file.document.metadata.name)
         .toolbar {
+            CanvasToolbar(editor: editor, document: $file.package.document)
             ToolbarItem(placement: .automatic) {
                 Button {
                     isInspectorPresented.toggle()
@@ -79,6 +83,14 @@ private struct DocumentWindowContent: View {
                 }
             }
         }
+        .focusedSceneValue(\.canvasEditor, editor)
+        .focusedSceneValue(\.documentFile, file)
+        .focusedSceneValue(\.windowUndoManager, undoManager)
+        // Rebuilt whenever this view updates, which is on every document edit
+        // because the view observes `file`. Publishing it is what refreshes the
+        // Undo and Redo menu titles; UndoManager itself is not observable.
+        .focusedSceneValue(\.undoState,
+                            UndoState(undoManager, revision: file.undoRevision))
         // Deliberately modest. The bottom strip is compressible (flexible
         // validation column, scrolling preview row), so the detail column can
         // shrink and the sidebar survives with the inspector open. Inflating
