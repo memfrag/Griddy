@@ -214,6 +214,18 @@ struct EditCommands: Commands {
             }
         }
 
+        if report.nodeInflation > 1.05 {
+            if !lines.isEmpty {
+                lines.append("")
+            }
+            lines.append(String(
+                format: "Reconciling the masters so they interpolate grew the "
+                    + "path from %d to %d segments (%.1fx).",
+                report.segmentsBeforeReconciliation,
+                report.segmentsAfterReconciliation,
+                report.nodeInflation))
+        }
+
         if !report.warnings.isEmpty {
             if !lines.isEmpty {
                 lines.append("")

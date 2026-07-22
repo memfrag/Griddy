@@ -75,8 +75,26 @@ public struct ExportReport: Equatable, Sendable {
     /// Comparing subpaths alone would call that compatible.
     public var commandCounts: [SymbolSlot: Int]
 
+    /// Outline segments before and after reconciliation.
+    ///
+    /// Reconciliation buys interpolability by inserting redundant on-curve
+    /// points, so the exported path is larger than the minimal outline the
+    /// solver produced. Spec 12.6 asks for that cost to be reported rather
+    /// than absorbed silently.
+    public var segmentsBeforeReconciliation: Int
+    public var segmentsAfterReconciliation: Int
+
     public var layerAssignments: [LayerAssignment]
     public var warnings: [String]
+
+    /// How much larger reconciliation made the path, as a multiple.
+    public var nodeInflation: Double {
+        guard segmentsBeforeReconciliation > 0 else {
+            return 1
+        }
+        return Double(segmentsAfterReconciliation)
+            / Double(segmentsBeforeReconciliation)
+    }
 
     /// Whether the masters share a path structure.
     ///
@@ -124,25 +142,52 @@ public enum SFSymbolTemplateExporter {
         var written: [SymbolSlot] = []
         var warnings: [String] = []
 
+        // Resolve every master before writing any of them: reconciliation
+        // needs all three at once, which is the one genuine barrier in the
+        // pipeline. See spec 14.5.
+        var outlines: [OutlinePath] = []
         for weight in SymbolWeight.authored {
+            let outline = document.resolvedOutline(weight: weight)
+            if outline.isEmpty {
+                warnings.append("The \(weight.rawValue) master is empty.")
+            }
+            outlines.append(outline)
+        }
+
+        // Reconcile them to a shared path structure. Without this the SF
+        // Symbols app refuses the file outright: "The provided variants are
+        // not interpolatable". See spec 12.6.
+        let reconciled = try OutlineCompatibility.reconcile(outlines)
+
+        let segmentsBefore = outlines.reduce(0) { $0 + $1.segmentCount }
+        let segmentsAfter = reconciled.reduce(0) { $0 + $1.segmentCount }
+
+        // Every slot group carries the same transform in these templates, so
+        // one mapping serves all three. Converting the masters together is what
+        // keeps their command counts equal after arcs expand into cubics.
+        guard let referenceSlot = template.variants[
+            SymbolSlot(weight: .regular, scale: scale)],
+              let referenceTransform = slotTransforms[referenceSlot.elementID],
+              let referenceInverse = referenceTransform.inverted else {
+            throw TemplateExportError.missingSlot("Regular-\(scaleSuffix(scale))")
+        }
+
+        let commandsPerMaster = reconciled.svgCommandsForReconciledMasters { point in
+            referenceInverse.apply(
+                to: document.coordinateSystem.templatePoint(from: point))
+        }
+
+        for (index, weight) in SymbolWeight.authored.enumerated() {
             let slot = SymbolSlot(weight: weight, scale: scale)
             guard let variant = template.variants[slot] else {
                 throw TemplateExportError.missingSlot(
                     "\(weight.rawValue.capitalized)-\(scaleSuffix(scale))")
             }
-            guard let transform = slotTransforms[variant.elementID],
-                  let inverse = transform.inverted else {
+            guard slotTransforms[variant.elementID]?.inverted != nil else {
                 throw TemplateExportError.degenerateTransform(variant.elementID)
             }
 
-            let outline = document.resolvedOutline(weight: weight)
-
-            // Unit space to template space, then template space into the slot
-            // group's own coordinates, since the group carries a transform and
-            // the path data inside it is local.
-            let commands = outline.svgCommands { point in
-                inverse.apply(to: document.coordinateSystem.templatePoint(from: point))
-            }
+            let commands = commandsPerMaster[index]
 
             text = try substitute(pathData: SVGPathWriter.write(commands),
                                   inSlot: variant.elementID,
@@ -154,10 +199,6 @@ public enum SFSymbolTemplateExporter {
             }
             commandCounts[slot] = commands.count
             written.append(slot)
-
-            if outline.isEmpty {
-                warnings.append("The \(weight.rawValue) master is empty.")
-            }
         }
 
         // Both counts must agree. Subpaths alone is not enough: boolean
@@ -183,6 +224,8 @@ public enum SFSymbolTemplateExporter {
             ExportReport(slotsWritten: written,
                          subpathCounts: subpathCounts,
                          commandCounts: commandCounts,
+                         segmentsBeforeReconciliation: segmentsBefore,
+                         segmentsAfterReconciliation: segmentsAfter,
                          layerAssignments: layerAssignments(for: document,
                                                             weight: .regular),
                          warnings: warnings)

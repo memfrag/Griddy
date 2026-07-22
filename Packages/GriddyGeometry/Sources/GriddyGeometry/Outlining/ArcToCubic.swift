@@ -53,14 +53,25 @@ public enum ArcToCubic {
     /// grows sharply beyond it.
     public static let maximumSweepPerSegment: Double = .pi / 2
 
+    /// How many cubics an arc needs to stay within tolerance.
+    public static func segmentCount(for arc: ArcSegment) -> Int {
+        max(1, Int(ceil(arc.sweep / maximumSweepPerSegment)))
+    }
+
     /// Approximates an arc as a chain of cubics.
-    public static func cubics(for arc: ArcSegment) -> [CubicSegment] {
+    ///
+    /// `count` overrides the number of pieces. Export needs that: reconciled
+    /// masters agree on outline segments, but a segment's *cubic* count follows
+    /// its sweep, so corresponding arcs of slightly different sweep would
+    /// expand into different numbers of commands and undo the reconciliation.
+    /// Subdividing further than necessary costs nodes but never accuracy.
+    public static func cubics(for arc: ArcSegment, count: Int? = nil) -> [CubicSegment] {
         let sweep = arc.sweep
         guard sweep > 1e-12, arc.radius > 1e-12 else {
             return []
         }
 
-        let count = max(1, Int(ceil(sweep / maximumSweepPerSegment)))
+        let count = max(1, count ?? segmentCount(for: arc))
         let step = sweep / Double(count)
         let signedStep = arc.isClockwise ? -step : step
 

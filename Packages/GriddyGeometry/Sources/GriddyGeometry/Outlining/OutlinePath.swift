@@ -40,6 +40,67 @@ public enum OutlineSegment: Codable, Hashable, Sendable {
         }
     }
 
+    /// The segment's arc length.
+    ///
+    /// Used to parameterise contours by distance travelled, which is how
+    /// corresponding positions are found across masters.
+    public var length: Double {
+        switch self {
+        case .line(let from, let to):
+            from.distance(to: to)
+        case .arc(let arc):
+            arc.radius * arc.sweep
+        }
+    }
+
+    /// The exact distance from a point to this segment.
+    ///
+    /// Analytic rather than sampled, because the segments are only ever lines
+    /// and circular arcs. Sampling would bound the answer by the sample
+    /// spacing, which is misleading precisely when the distance is small.
+    public func distance(to point: IconPoint) -> Double {
+        switch self {
+        case .line(let from, let to):
+            return PrimitiveGeometry.distance(from: point, toSegmentFrom: from, to: to)
+
+        case .arc(let arc):
+            let radial = arc.center.vector(to: point)
+            guard radial.length > .ulpOfOne else {
+                return arc.radius
+            }
+            let angle = IconAngle(radians: atan2(radial.dy, radial.dx))
+            if arc.parameter(atAngle: angle) != nil {
+                return abs(radial.length - arc.radius)
+            }
+            return min(point.distance(to: arc.startPoint),
+                       point.distance(to: arc.endPoint))
+        }
+    }
+
+    /// The parameter at which this segment reaches its smallest x, and that x.
+    ///
+    /// The leftmost point is a stable landmark: it moves continuously as stroke
+    /// width changes, so it survives as a correspondence anchor between masters
+    /// where a vertex index would not.
+    var leftmostExtreme: (parameter: Double, x: Double) {
+        switch self {
+        case .line(let from, let to):
+            from.x <= to.x ? (0, from.x) : (1, to.x)
+
+        case .arc(let arc):
+            {
+                // A circle's leftmost point is at 180 degrees, if the sweep
+                // reaches it; otherwise an endpoint is the extreme.
+                let west = IconAngle(radians: .pi)
+                if let t = arc.parameter(atAngle: west) {
+                    return (t, arc.center.x - arc.radius)
+                }
+                let start = arc.startPoint, end = arc.endPoint
+                return start.x <= end.x ? (0, start.x) : (1, end.x)
+            }()
+        }
+    }
+
     /// This segment's contribution to the contour's signed area.
     ///
     /// The shoelace term for the chord, plus the area of the circular segment
@@ -144,6 +205,26 @@ public struct OutlineContour: Codable, Hashable, Sendable {
     /// The contour forced to a given orientation.
     public func oriented(counterclockwise: Bool) -> OutlineContour {
         isCounterclockwise == counterclockwise ? self : reversed
+    }
+
+    /// Total arc length around the contour.
+    public var length: Double {
+        segments.reduce(0) { $0 + $1.length }
+    }
+
+    /// The average of the segment start points.
+    ///
+    /// A cheap stand-in for the area centroid, and sufficient for matching
+    /// contours between masters that differ only by stroke width.
+    public var averagePoint: IconPoint {
+        guard !segments.isEmpty else {
+            return .zero
+        }
+        let sum = segments.reduce(IconPoint.zero) { total, segment in
+            IconPoint(x: total.x + segment.start.x, y: total.y + segment.start.y)
+        }
+        return IconPoint(x: sum.x / Double(segments.count),
+                         y: sum.y / Double(segments.count))
     }
 
     /// Whether each segment starts where the previous one ended.

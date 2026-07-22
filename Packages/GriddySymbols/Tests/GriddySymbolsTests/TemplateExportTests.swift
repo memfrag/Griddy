@@ -200,11 +200,18 @@ struct ExportReportTests {
         var package = try drawnDocument()
 
         // Two layers, so the checklist has something to distinguish.
+        //
+        // The second circle sits well clear of the first. Nesting one inside
+        // the other made the export fail reconciliation for a real reason: at
+        // Black the strokes grew until two regions became one, which is a
+        // topology change no amount of point insertion can bridge.
         let cutout = SymbolLayer(name: "Inner Counter", role: .cutout)
         package.document.layers.append(cutout)
         let centre = package.document.coordinateSystem.capHeightBox.center
         package.document.addPrimitive(
-            .circle(CirclePrimitive(center: centre, radius: 2)),
+            .circle(CirclePrimitive(center: IconPoint(x: centre.x + 18,
+                                                      y: centre.y),
+                                    radius: 3)),
             toLayerWithID: cutout.id)
 
         let (_, report) = try SFSymbolTemplateExporter.export(
@@ -224,27 +231,52 @@ struct ExportReportTests {
                 == first.firstSubpath + first.subpathCount)
     }
 
-    @Test("Masters that do not share structure are reported, not shipped quietly")
-    func structureMismatchIsReported() throws {
+    @Test("The case Apple rejected now exports interpolatable")
+    func previouslyRejectedCaseReconciles() throws {
         let package = try drawnDocument()
         let (_, report) = try SFSymbolTemplateExporter.export(
             document: package.document, sourceTemplate: package.sourceTemplate)
 
-        // A circle unioned with an overlapping line produces the same two
-        // regions at every weight, but a different number of path commands,
-        // because boolean resolution cuts the outlines at different places as
-        // the stroke grows. This is precisely the case the outline
-        // compatibility pass exists to fix, and it is not hypothetical: it
-        // arises from two primitives.
-        #expect(Set(report.subpathCounts.values).count == 1,
-                "subpaths agree: \(report.subpathCounts.values.sorted())")
-        #expect(Set(report.commandCounts.values).count > 1,
-                "commands should differ: \(report.commandCounts.values.sorted())")
+        // A circle unioned with an overlapping line. Before the compatibility
+        // pass this exported with 2 subpaths at every weight but 20, 22 and 22
+        // path commands, and the SF Symbols app refused the file: "The
+        // provided variants are not interpolatable."
+        let subpaths = Set(report.subpathCounts.values)
+        let commands = Set(report.commandCounts.values)
 
-        #expect(!report.mastersShareStructure,
-                "comparing subpaths alone would wrongly call this compatible")
-        #expect(report.warnings.contains { $0.contains("command counts") },
-                "the mismatch must be reported")
+        #expect(subpaths.count == 1,
+                "subpaths: \(report.subpathCounts.values.sorted())")
+        #expect(commands.count == 1,
+                "commands: \(report.commandCounts.values.sorted())")
+
+        #expect(report.mastersShareStructure)
+        #expect(report.warnings.isEmpty,
+                "unexpected warnings: \(report.warnings)")
+    }
+
+    @Test("Arcs expanding to cubics does not undo the reconciliation")
+    func cubicExpansionStaysReconciled() throws {
+        let package = try drawnDocument()
+        let (data, _) = try SFSymbolTemplateExporter.export(
+            document: package.document, sourceTemplate: package.sourceTemplate)
+        let reimported = try SFSymbolTemplateImporter.import(data)
+
+        // Reconciliation matches outline segments, but an arc expands into a
+        // number of cubics that follows its sweep. Corresponding arcs of
+        // slightly different sweep would otherwise produce different command
+        // counts and quietly undo the work, which is only visible in the
+        // written file.
+        let counts = SymbolWeight.authored.map { weight in
+            reimported.variants[SymbolSlot(weight: weight, scale: .small)]?
+                .commands.count ?? -1
+        }
+        #expect(Set(counts).count == 1, "written command counts: \(counts)")
+
+        let subpaths = SymbolWeight.authored.map { weight in
+            reimported.variants[SymbolSlot(weight: weight, scale: .small)]?
+                .subpathCount ?? -1
+        }
+        #expect(Set(subpaths).count == 1, "written subpath counts: \(subpaths)")
     }
 
     @Test("Matching masters report no structural warning")
