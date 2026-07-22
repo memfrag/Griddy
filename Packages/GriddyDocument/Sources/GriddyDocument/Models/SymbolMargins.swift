@@ -92,10 +92,17 @@ public struct ResolvedMargins: Hashable, Sendable {
     -> ResolvedMargins {
         let metrics = margins.metrics(for: weight, in: coordinateSystem)
 
+        // Centred in the design area rather than sitting at the origin. The
+        // canvas is deliberately asymmetric about x = 0 -- that is the glyph
+        // origin, and glyphs grow rightward from it -- so an advance placed at
+        // the origin lands at 17% to 50% of the width and reads as misaligned.
+        // Once anything is drawn the guides follow the artwork instead.
         guard let bounds = outline.bounds else {
-            return ResolvedMargins(originX: 0,
-                                   advance: Self.emptyAdvanceInUnits,
-                                   metrics: metrics)
+            let advance = Self.emptyAdvanceInUnits
+            return ResolvedMargins(
+                originX: coordinateSystem.designArea.center.x - advance / 2,
+                advance: advance,
+                metrics: metrics)
         }
 
         return ResolvedMargins(
