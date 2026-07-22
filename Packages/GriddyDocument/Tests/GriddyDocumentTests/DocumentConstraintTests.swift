@@ -32,7 +32,7 @@ struct DocumentConstraintTests {
         let (document, _) = documentWithCircle(at: IconPoint(x: 4, y: 4))
         let context = document.constraintContext
 
-        #expect(context.canvasBounds == document.coordinateSystem.canvasBounds)
+        #expect(context.capHeightBox == document.coordinateSystem.capHeightBox)
         #expect(context.gridInterval == document.grid.secondaryInterval)
         #expect(context.keyShapeBounds.count == document.keyShapes.all.count)
     }
@@ -44,8 +44,11 @@ struct DocumentConstraintTests {
         try document.addConstraint(.centered(
             CenteredConstraint(primitiveID: circle.id, axis: .horizontal)))
 
+        // Centring is against the cap-height box, whose width comes from the
+        // template's margins -- not a fixed 16 units.
+        let centre = document.coordinateSystem.capHeightBox.center
         let anchor = try #require(document.primitive(withID: circle.id)?.anchor)
-        #expect(approximately(anchor.x, 8), "snapped to the canvas centre line")
+        #expect(approximately(anchor.x, centre.x), "snapped to the centre line")
         #expect(document.constraints.count == 1)
     }
 
@@ -92,9 +95,10 @@ struct DocumentConstraintTests {
         try document.addConstraint(.centered(
             CenteredConstraint(primitiveID: circle.id, axis: .vertical)))
 
+        let centre = document.coordinateSystem.capHeightBox.center
         let anchor = try #require(document.primitive(withID: circle.id)?.anchor)
-        #expect(approximately(anchor.x, 8))
-        #expect(approximately(anchor.y, 8))
+        #expect(approximately(anchor.x, centre.x))
+        #expect(approximately(anchor.y, centre.y))
         #expect(document.constraints.count == 2)
     }
 

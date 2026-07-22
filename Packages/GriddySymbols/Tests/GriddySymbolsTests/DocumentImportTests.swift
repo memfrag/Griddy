@@ -70,7 +70,7 @@ struct DocumentImportTests {
             fixture("authoring-template-v7"), appVersion: "1.0.0")
 
         #expect(package.document.metadata.name.contains("cup"))
-        #expect(package.document.coordinateSystem.canvasBounds.size.height == 16)
+        #expect(package.document.coordinateSystem.capHeightBox.size.height == 16)
         #expect(package.sourceTemplate != nil, "the original must be preserved")
     }
 
@@ -164,7 +164,7 @@ struct DocumentImportTests {
             }
 
             let bounds = try #require(PrimitiveGeometry.bounds(containing: points))
-            let canvas = package.document.coordinateSystem.canvasBounds
+            let canvas = package.document.coordinateSystem.designArea
 
             #expect(bounds.intersects(canvas.inset(by: -4)),
                     "\(name): artwork at \(bounds) is nowhere near the canvas \(canvas)")

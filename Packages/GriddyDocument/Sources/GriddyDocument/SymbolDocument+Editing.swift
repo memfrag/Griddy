@@ -124,7 +124,7 @@ extension SymbolDocument {
     /// Fitting the view to the canvas alone would push imported artwork off
     /// screen. See spec 9.1.
     public var visibleBounds: IconRect {
-        var result = coordinateSystem.canvasBounds
+        var result = coordinateSystem.designArea
 
         for primitive in primitivesInDrawOrder {
             guard let bounds = PrimitiveGeometry.bounds(of: primitive) else {

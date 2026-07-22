@@ -25,17 +25,31 @@ public struct TemplateMetrics: Codable, Hashable, Sendable {
     /// The left edge of the artwork margin, in template space.
     public var leftMarginX: Double
 
+    /// The right edge of the artwork margin, in template space.
+    ///
+    /// Together with ``leftMarginX`` this is the symbol's advance width, and it
+    /// is a real bound: artwork stays inside it in Apple's own templates.
+    /// Nothing in the template bounds artwork vertically.
+    public var rightMarginX: Double
+
     /// The alignment rectangle for each scale, in template space.
     public var alignmentRects: [SymbolScale: TemplateRect]
 
     public init(baselineY: Double,
                 caplineY: Double,
                 leftMarginX: Double,
+                rightMarginX: Double,
                 alignmentRects: [SymbolScale: TemplateRect]) {
         self.baselineY = baselineY
         self.caplineY = caplineY
         self.leftMarginX = leftMarginX
+        self.rightMarginX = rightMarginX
         self.alignmentRects = alignmentRects
+    }
+
+    /// The distance between the margins, in template space.
+    public var marginWidth: Double {
+        abs(rightMarginX - leftMarginX)
     }
 
     /// The distance between baseline and capline, in template space.

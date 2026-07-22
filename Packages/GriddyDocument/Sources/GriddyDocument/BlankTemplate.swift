@@ -25,6 +25,7 @@ extension TemplateMetrics {
         baselineY: 696,
         caplineY: 625.541,
         leftMarginX: 1391.2,
+        rightMarginX: 1508.49,
         alignmentRects: [
             .small: TemplateRect(x: 1391.2, y: 625.541,
                                  width: 117.29, height: 70.459),

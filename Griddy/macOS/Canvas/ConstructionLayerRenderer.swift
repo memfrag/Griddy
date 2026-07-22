@@ -13,8 +13,15 @@ struct ConstructionLayerRenderer {
     let document: SymbolDocument
     let transform: CanvasTransform
 
-    private var canvasBounds: IconRect {
-        document.coordinateSystem.canvasBounds
+    /// The drawing surface: what the grid covers and the view fits to.
+    private var designArea: IconRect {
+        document.coordinateSystem.designArea
+    }
+
+    /// Baseline to capline. A reference to align against, not a boundary --
+    /// artwork legitimately extends past it. See spec 9.1.
+    private var capHeightBox: IconRect {
+        document.coordinateSystem.capHeightBox
     }
 
     func draw(in context: inout GraphicsContext) {
@@ -43,7 +50,7 @@ struct ConstructionLayerRenderer {
     // MARK: Pieces
 
     private func drawCanvasFill(in context: inout GraphicsContext) {
-        context.fill(Path(transform.rect(canvasBounds)), with: .color(.canvasFill))
+        context.fill(Path(transform.rect(designArea)), with: .color(.canvasFill))
     }
 
     private func drawGrid(in context: inout GraphicsContext,
@@ -62,17 +69,17 @@ struct ConstructionLayerRenderer {
 
         var path = Path()
 
-        var x = canvasBounds.minX
-        while x <= canvasBounds.maxX + .ulpOfOne {
-            path.move(to: transform.point(IconPoint(x: x, y: canvasBounds.minY)))
-            path.addLine(to: transform.point(IconPoint(x: x, y: canvasBounds.maxY)))
+        var x = designArea.minX
+        while x <= designArea.maxX + .ulpOfOne {
+            path.move(to: transform.point(IconPoint(x: x, y: designArea.minY)))
+            path.addLine(to: transform.point(IconPoint(x: x, y: designArea.maxY)))
             x += interval
         }
 
-        var y = canvasBounds.minY
-        while y <= canvasBounds.maxY + .ulpOfOne {
-            path.move(to: transform.point(IconPoint(x: canvasBounds.minX, y: y)))
-            path.addLine(to: transform.point(IconPoint(x: canvasBounds.maxX, y: y)))
+        var y = designArea.minY
+        while y <= designArea.maxY + .ulpOfOne {
+            path.move(to: transform.point(IconPoint(x: designArea.minX, y: y)))
+            path.addLine(to: transform.point(IconPoint(x: designArea.maxX, y: y)))
             y += interval
         }
 
@@ -118,9 +125,9 @@ struct ConstructionLayerRenderer {
 
         // The baseline is unit-space Y = 0 and the capline is Y = 16, by
         // definition of the coordinate system.
-        for y in [canvasBounds.minY, canvasBounds.maxY] {
-            path.move(to: transform.point(IconPoint(x: canvasBounds.minX - 1, y: y)))
-            path.addLine(to: transform.point(IconPoint(x: canvasBounds.maxX + 1, y: y)))
+        for y in [capHeightBox.minY, capHeightBox.maxY] {
+            path.move(to: transform.point(IconPoint(x: designArea.minX - 1, y: y)))
+            path.addLine(to: transform.point(IconPoint(x: designArea.maxX + 1, y: y)))
         }
 
         context.stroke(path,
@@ -128,10 +135,24 @@ struct ConstructionLayerRenderer {
                        style: StrokeStyle(lineWidth: 1, dash: [6, 3]))
     }
 
+    /// Draws the two regions that mean something.
+    ///
+    /// The cap-height box is a light reference; the margin box is the real
+    /// horizontal bound on artwork, so it is drawn as an actual edge. Earlier
+    /// this drew a single border around the cap-height box, which read as "keep
+    /// your artwork inside here" -- advice that every real symbol violates.
     private func drawCanvasBorder(in context: inout GraphicsContext) {
-        context.stroke(Path(transform.rect(canvasBounds)),
-                       with: .color(.canvasBorder),
-                       lineWidth: 1)
+        context.stroke(Path(transform.rect(capHeightBox)),
+                       with: .color(.capHeightBox),
+                       style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
+
+        let margins = document.coordinateSystem.marginBox
+        var edges = Path()
+        for x in [margins.minX, margins.maxX] {
+            edges.move(to: transform.point(IconPoint(x: x, y: margins.minY)))
+            edges.addLine(to: transform.point(IconPoint(x: x, y: margins.maxY)))
+        }
+        context.stroke(edges, with: .color(.marginEdge), lineWidth: 1)
     }
 }
 
@@ -140,7 +161,8 @@ struct ConstructionLayerRenderer {
 private extension Color {
 
     static let canvasFill = Color(nsColor: .textBackgroundColor)
-    static let canvasBorder = Color.secondary.opacity(0.5)
+    static let capHeightBox = Color.secondary.opacity(0.4)
+    static let marginEdge = Color.orange.opacity(0.55)
     static let gridPrimary = Color.secondary.opacity(0.28)
     static let gridSecondary = Color.secondary.opacity(0.12)
     static let safeArea = Color.green.opacity(0.7)

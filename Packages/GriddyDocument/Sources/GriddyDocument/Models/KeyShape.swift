@@ -90,7 +90,7 @@ public struct KeyShapeSet: Codable, Hashable, Sendable {
     ///   Apple symbols, in the same pass that resolves the scale compensation
     ///   factors in spec 12.4.
     public static func `default`(for coordinateSystem: CoordinateSystem) -> KeyShapeSet {
-        let canvas = coordinateSystem.canvasBounds
+        let canvas = coordinateSystem.capHeightBox
         let center = canvas.center
 
         func centered(width: Double, height: Double) -> IconRect {

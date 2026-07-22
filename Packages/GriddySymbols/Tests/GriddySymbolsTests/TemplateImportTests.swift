@@ -208,7 +208,7 @@ struct AuthoringTemplateTests {
 
         // One unit is a sixteenth of cap height, by definition.
         #expect(approximately(system.unitInTemplateSpace, 70.459 / 16))
-        #expect(system.canvasBounds.size.height == 16)
+        #expect(system.capHeightBox.size.height == 16)
 
         // The origin maps to the baseline, and 16u up to the capline.
         let origin = system.templatePoint(from: .zero)

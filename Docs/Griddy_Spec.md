@@ -390,17 +390,39 @@ On import (including the blank template used for new documents, §7.1), Griddy e
 1 unit (1u) = (capline.y - baseline.y) / 16
 ```
 
-From that single anchor:
-
-- **Canvas height** is fixed at 16u, spanning baseline to capline.
-- **Canvas width** is free. It defaults to 16u but grows for wide symbols, because SF Symbols are deliberately not square.
-- **Origin** is at the intersection of the baseline and the template's left margin.
-- **Y increases upward** in Griddy coordinates. SVG's Y-down convention is applied at export.
-- **Safe area, margins, and alignment rects** are read from the template and expressed in units.
+Cap height is the right anchor for two reasons. It is what a symbol aligns against in running text, so a grid tied to it is meaningful rather than arbitrary. And it is stable: it measures identically at Small, Medium and Large in every template examined.
 
 Anchoring the unit to cap height rather than to the alignment rect means the grid lines up with the typographic guides designers actually align to, and the vertical module stays stable across templates.
 
-The export transform into SF Symbols SVG coordinates is therefore a uniform scale, a Y flip, and a translation to the target slot's origin. No non-uniform scaling or shear is ever applied.
+#### Three Regions, Deliberately Distinct
+
+An earlier draft of this specification described a single "canvas": 16u tall, spanning baseline to capline, with width free and defaulting to 16u. That was wrong in both directions, and measurement of real templates shows why.
+
+| | Authoring template | Static export |
+|---|---|---|
+| Artwork height | 20.5u | 27.3u |
+| Extends below baseline | 2.3u | 6.4u |
+| Extends above capline | 2.3u | 4.9u |
+| Margin width | 26.6u | 33.6u |
+| Artwork within margins horizontally | yes | yes |
+
+Artwork routinely exceeds cap height, in both directions. And real symbols are 27 to 34 units wide, not 16. One region cannot be both the alignment reference and the drawing surface, so there are three:
+
+**Cap-height box.** Baseline to capline, 16u tall, as wide as the margins. This is a *reference*, not a boundary — what the symbol aligns against in text. Artwork exceeding it is normal and is not an error. It should be drawn as a guide, in the manner of the baseline itself, and never as a frame implying artwork belongs inside it.
+
+**Margin box.** From the template's `left-margin-*` and `right-margin-*` guides for the slot being edited. This is the one extent the template genuinely constrains, and Apple's own artwork stays inside it in every template examined. Its width is the symbol's advance width and varies per symbol.
+
+**Design area.** The drawing surface. Horizontally the margin box; vertically the cap-height box extended by half a cap height at each end, giving 32u from -8u to +24u. Nothing in the template bounds artwork vertically, so this is a generous default rather than a rule — it clears the 6.4u below and 4.9u above measured in real templates.
+
+The grid runs at 1u across the whole design area. "16 × 16" describes the cap-height square, not the drawing extent.
+
+#### Origin and Transform
+
+- **Origin** is at the intersection of the baseline and the template's left margin.
+- **Y increases upward** in Griddy coordinates. SVG's Y-down convention is applied at export.
+- Guides and artwork alike are read through their accumulated SVG `transform` attributes; templates position variant groups with `translate` or `matrix` and keep path data in local coordinates.
+
+The export transform is therefore a uniform scale, a Y flip, and a translation to the target slot's origin. No non-uniform scaling or shear is ever applied.
 
 ### 9.2 Grid Definition
 
@@ -416,7 +438,7 @@ struct GridDefinition: Codable, Equatable {
 }
 ```
 
-`canvasSize` and `safeArea` are **populated from the template** (§9.1) and are not user-authored. The remaining fields are user-configurable, with these defaults:
+`canvasSize` is the design area and `safeArea` is derived from the margin box, both **populated from the template** (§9.1) rather than user-authored. Note that the safe area insets the *margin* box: insetting the cap-height box would mark most real artwork unsafe. The remaining fields are user-configurable, with these defaults:
 
 ```text
 primaryInterval    1.0u        (16 rows between baseline and capline)
@@ -1140,7 +1162,8 @@ Validation runs continuously while designing and again at export time.
 
 #### Geometry Validation
 
-- Artwork is inside permitted bounds.
+- Artwork is inside the margin box **horizontally**. This is a real template constraint and a violation is an **error**.
+- Artwork's vertical extent is reported but not constrained. Nothing in the template bounds a symbol vertically, and real symbols exceed cap height by a wide margin, so an unusually tall symbol is a **warning** about a design smell rather than a rule violation (§9.1).
 - Margins are present.
 - No accidental open paths where closed paths are required.
 - No invalid zero-length segments.

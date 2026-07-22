@@ -12,7 +12,8 @@ import GriddyGeometry
 /// depends on this one; the dependency runs one way. See spec 16.2.
 public struct ConstraintContext: Sendable {
 
-    public var canvasBounds: IconRect
+    /// The cap-height reference box, which is what centring centres on.
+    public var capHeightBox: IconRect
 
     /// Key shape bounds by identifier, for on-key-shape constraints.
     public var keyShapeBounds: [UUID: IconRect]
@@ -20,10 +21,10 @@ public struct ConstraintContext: Sendable {
     /// Spacing of the finest grid, for on-grid constraints.
     public var gridInterval: Double
 
-    public init(canvasBounds: IconRect,
+    public init(capHeightBox: IconRect,
                 keyShapeBounds: [UUID: IconRect] = [:],
                 gridInterval: Double = 0.25) {
-        self.canvasBounds = canvasBounds
+        self.capHeightBox = capHeightBox
         self.keyShapeBounds = keyShapeBounds
         self.gridInterval = gridInterval
     }

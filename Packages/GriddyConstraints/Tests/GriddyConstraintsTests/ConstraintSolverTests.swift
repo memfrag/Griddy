@@ -8,7 +8,7 @@ import GriddyGeometry
 @testable import GriddyConstraints
 
 private let canvas = IconRect(x: 0, y: 0, width: 16, height: 16)
-private let context = ConstraintContext(canvasBounds: canvas)
+private let context = ConstraintContext(capHeightBox: canvas)
 
 private func approximately(_ value: Double,
                            _ expected: Double,
@@ -284,7 +284,7 @@ struct ComplianceTests {
         let resolved = ConstraintSolver.resolve(
             primitives: [.circle(subject)],
             constraints: [.onGrid(OnGridConstraint(primitiveID: subject.id))],
-            context: ConstraintContext(canvasBounds: canvas, gridInterval: 0.25))
+            context: ConstraintContext(capHeightBox: canvas, gridInterval: 0.25))
 
         let anchor = try #require(resolved.first?.anchor)
         #expect(approximately(anchor.x, 3.25))

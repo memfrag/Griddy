@@ -149,7 +149,11 @@ struct NewDocumentTests {
                                           appVersion: "1.0.0")
 
         #expect(document.coordinateSystem.templateMetrics == .blankTemplate)
-        #expect(document.grid.canvasSize.height == 16)
+        // The grid covers the design area, which extends half a cap height
+        // past the baseline and capline; the cap-height box itself stays 16.
+        #expect(document.coordinateSystem.capHeightBox.size.height == 16)
+        #expect(document.grid.canvasSize.height
+                == document.coordinateSystem.designArea.size.height)
 
         // One unit is a sixteenth of cap height, and cap height now comes from
         // a real SF Symbols template rather than a round placeholder.

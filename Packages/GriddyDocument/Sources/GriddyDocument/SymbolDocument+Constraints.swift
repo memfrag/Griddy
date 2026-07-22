@@ -21,7 +21,7 @@ extension SymbolDocument {
     /// The facts the constraint solver needs from this document.
     public var constraintContext: ConstraintContext {
         ConstraintContext(
-            canvasBounds: coordinateSystem.canvasBounds,
+            capHeightBox: coordinateSystem.capHeightBox,
             keyShapeBounds: Dictionary(
                 keyShapes.all.map { ($0.id, $0.bounds) },
                 uniquingKeysWith: { first, _ in first }

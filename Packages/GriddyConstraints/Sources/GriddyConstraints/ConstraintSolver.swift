@@ -168,7 +168,7 @@ public enum ConstraintSolver {
               let anchor = primitive.anchor else {
             return
         }
-        let centre = context.canvasBounds.center
+        let centre = context.capHeightBox.center
 
         let target = switch constraint.axis {
         case .horizontal: IconPoint(x: centre.x, y: anchor.y)

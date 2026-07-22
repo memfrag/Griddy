@@ -255,7 +255,8 @@ public enum SFSymbolTemplateImporter {
                                    inherited: inherited) else {
             throw TemplateImportError.missingGuide("Capline-\(suffix)")
         }
-        guard abs(baseline - capline) > 1e-9 else {
+        let capHeightSpan = abs(baseline - capline)
+        guard capHeightSpan > 1e-9 else {
             throw TemplateImportError.degenerateMetrics
         }
 
@@ -265,11 +266,15 @@ public enum SFSymbolTemplateImporter {
         // offset the artwork by the distance between two masters.
         let leftMargin = marginX(in: guides, edge: "left",
                                  suffix: suffix, inherited: inherited) ?? 0
+        let rightMargin = marginX(in: guides, edge: "right",
+                                  suffix: suffix, inherited: inherited)
+            ?? leftMargin + capHeightSpan
 
         return TemplateMetrics(
             baselineY: baseline,
             caplineY: capline,
             leftMarginX: leftMargin,
+            rightMarginX: rightMargin,
             alignmentRects: alignmentRects(in: guides, inherited: inherited)
         )
     }

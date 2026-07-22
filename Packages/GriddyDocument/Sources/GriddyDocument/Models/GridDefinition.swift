@@ -49,9 +49,12 @@ public struct GridDefinition: Codable, Hashable, Sendable {
 
     /// The default grid for a coordinate system, per spec 9.2.
     public static func `default`(for coordinateSystem: CoordinateSystem) -> GridDefinition {
-        let bounds = coordinateSystem.canvasBounds
-        return GridDefinition(canvasSize: bounds.size,
-                              safeArea: bounds.inset(by: 1))
+        // Safe area comes off the margin box, the one extent the template
+        // actually bounds. Insetting the cap-height box was meaningless:
+        // artwork legitimately sits outside it. See spec 9.1.
+        let design = coordinateSystem.designArea
+        return GridDefinition(canvasSize: design.size,
+                              safeArea: coordinateSystem.marginBox.inset(by: 1))
     }
 
     /// Snaps a value to the nearest secondary grid line when it lies within

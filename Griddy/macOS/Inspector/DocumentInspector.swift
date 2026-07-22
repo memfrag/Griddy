@@ -51,8 +51,8 @@ struct DocumentInspector: View {
             Section("Coordinate System") {
                 row("Unit", value: "cap ÷ 16")
                 row("1 u", value: "\(format(document.coordinateSystem.unitInTemplateSpace)) tpl")
-                row("Canvas", value: "\(format(document.coordinateSystem.canvasBounds.size.width))"
-                    + " × \(format(document.coordinateSystem.canvasBounds.size.height)) u")
+                row("Design area", value: "\(format(document.coordinateSystem.designArea.size.width))"
+                    + " × \(format(document.coordinateSystem.designArea.size.height)) u")
                 row("Cap height",
                     value: format(document.coordinateSystem.templateMetrics.capHeight))
             }

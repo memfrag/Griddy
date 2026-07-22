@@ -12,6 +12,7 @@ private let metrics = TemplateMetrics(
     baselineY: 100,
     caplineY: 36,
     leftMarginX: 20,
+    rightMarginX: 20 + 64 * 1.5,
     alignmentRects: [:]
 )
 
@@ -27,6 +28,7 @@ struct CoordinateSystemDerivationTests {
         let inverted = TemplateMetrics(baselineY: 36,
                                        caplineY: 100,
                                        leftMarginX: 20,
+                                       rightMarginX: 116,
                                        alignmentRects: [:])
         #expect(inverted.capHeight == 64)
     }
@@ -37,21 +39,43 @@ struct CoordinateSystemDerivationTests {
         #expect(system.unitInTemplateSpace == 4)
     }
 
-    @Test("Canvas is 16 units tall and defaults to 16 wide")
-    func canvasBounds() {
+    @Test("The cap-height box spans baseline to capline")
+    func capHeightBox() {
         let system = CoordinateSystem(templateMetrics: metrics)
-        #expect(system.canvasBounds.size.height == 16)
-        #expect(system.canvasBounds.size.width == 16)
-        #expect(system.canvasBounds.origin == .zero)
+        #expect(system.capHeightBox.size.height == 16)
+        #expect(system.capHeightBox.origin == .zero)
     }
 
-    @Test("Canvas width is free, so wide symbols can exceed 16 units")
-    func canvasWidthIsFree() {
-        let system = CoordinateSystem(templateMetrics: metrics,
-                                      canvasWidthInUnits: 22)
-        #expect(system.canvasBounds.size.width == 22)
-        #expect(system.canvasBounds.size.height == 16,
-                "Height must stay pinned to cap height regardless of width")
+    @Test("Width comes from the margins, not from a fixed default")
+    func widthFromMargins() {
+        // Margins span 1.5 cap heights, so 24 units. Real symbols measured
+        // 26.6 and 33.6 units wide, which is why a 16-unit default was wrong.
+        let system = CoordinateSystem(templateMetrics: metrics)
+        #expect(abs(system.widthInUnits - 24) < 1e-9)
+        #expect(abs(system.capHeightBox.size.width - 24) < 1e-9)
+    }
+
+    @Test("The design area extends past the cap-height box in both directions")
+    func designAreaOvershoots() {
+        // Artwork legitimately exceeds cap height: 20.5 and 27.3 units tall in
+        // two real templates, running both below the baseline and above the
+        // capline. The drawing surface has to allow for that.
+        let system = CoordinateSystem(templateMetrics: metrics)
+
+        #expect(system.designArea.minY == -8)
+        #expect(system.designArea.maxY == 24)
+        #expect(system.designArea.size.height == 32)
+        #expect(system.designArea.size.width == system.capHeightBox.size.width,
+                "the design area is bounded horizontally by the margins")
+    }
+
+    @Test("A template with no usable margins falls back rather than collapsing")
+    func degenerateMargins() {
+        let noMargins = TemplateMetrics(baselineY: 100, caplineY: 36,
+                                        leftMarginX: 20, rightMarginX: 20,
+                                        alignmentRects: [:])
+        let system = CoordinateSystem(templateMetrics: noMargins)
+        #expect(system.widthInUnits == CoordinateSystem.fallbackWidthInUnits)
     }
 }
 
@@ -106,6 +130,7 @@ struct ExportTransformTests {
         let degenerate = TemplateMetrics(baselineY: 50,
                                          caplineY: 50,
                                          leftMarginX: 0,
+                                         rightMarginX: 96,
                                          alignmentRects: [:])
         let system = CoordinateSystem(templateMetrics: degenerate)
         let point = system.iconPoint(from: IconPoint(x: 10, y: 10))
