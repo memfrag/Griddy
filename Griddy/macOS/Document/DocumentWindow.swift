@@ -35,6 +35,7 @@ private struct DocumentWindowContent: View {
     @State private var selection: SidebarSelection? = .symbol
     @State private var isInspectorPresented = true
     @State private var editor = CanvasEditor()
+    @State private var validator = DocumentValidator()
     @Environment(\.undoManager) private var undoManager
 
     /// Explicit rather than left to SwiftUI's discretion, so the sidebar's
@@ -65,7 +66,7 @@ private struct DocumentWindowContent: View {
                 SymbolCanvasView(file: file, editor: editor)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 Divider()
-                BottomStrip(document: file.document)
+                BottomStrip(document: file.document, state: validator.state)
             }
         }
         .inspector(isPresented: $isInspectorPresented) {
@@ -82,6 +83,12 @@ private struct DocumentWindowContent: View {
                     Label("Toggle Inspector", systemImage: "sidebar.trailing")
                 }
             }
+        }
+        // Validation is driven from here rather than from the document model:
+        // it is derived state, not document state, and recomputing it inside a
+        // mutation would put a boolean solve on the undo path.
+        .task(id: file.undoRevision) {
+            validator.documentDidChange(to: file.document)
         }
         .focusedSceneValue(\.canvasEditor, editor)
         .focusedSceneValue(\.documentFile, file)

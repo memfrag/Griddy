@@ -74,6 +74,28 @@ public enum Constraint: Codable, Hashable, Sendable, Identifiable {
         }
     }
 
+    /// Whether the solver acts on this kind.
+    ///
+    /// Five kinds are recorded, displayed and saved, but move no geometry:
+    /// each needs a resolution rule that is more than a projection, and
+    /// enforcing them half-correctly would be worse than not at all. See the
+    /// matching case in ``ConstraintSolver/resolve(_:in:context:)``.
+    ///
+    /// Exposed rather than left implicit so validation can say so out loud. A
+    /// constraint that silently does nothing is worse than one that is absent,
+    /// because the document claims a relationship it is not keeping. Anyone
+    /// implementing one of these updates this list and the solver together.
+    public var isEnforced: Bool {
+        switch self {
+        case .onKeyShape, .fixedDistance, .equalLength, .equalSpacing,
+             .opticalOffset:
+            false
+        case .onGrid, .centered, .equalRadius, .tangent, .concentric,
+             .symmetric, .parallel, .perpendicular, .fixedAngle:
+            true
+        }
+    }
+
     /// The constraint with its enablement changed.
     ///
     /// A disabled constraint keeps its record and its place in the document but

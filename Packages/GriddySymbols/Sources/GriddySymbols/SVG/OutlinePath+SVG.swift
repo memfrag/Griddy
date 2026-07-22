@@ -32,10 +32,18 @@ extension Array where Element == OutlinePath {
         // this extension's own Self inside it.
         var result = [[SVGPathCommand]](repeating: [], count: count)
 
+        // Counts come from the reference master and every other access is
+        // bounds-checked, so a master reconciliation left *shorter* is silently
+        // truncated rather than crashing -- and a master left with fewer
+        // contours used to trap here on an out-of-range index. Both are
+        // postcondition violations of `OutlineCompatibility.reconcile`, and
+        // `GeometricValidator.interpolability` reports them; this only ensures
+        // the failure mode is a wrong file rather than a dead process.
         for contourIndex in reference.contours.indices {
             // Start every master's contour at its own first point.
             for master in indices {
-                guard let start = self[master].contours[contourIndex]
+                guard contourIndex < self[master].contours.count,
+                      let start = self[master].contours[contourIndex]
                     .segments.first?.start else {
                     continue
                 }
@@ -50,6 +58,9 @@ extension Array where Element == OutlinePath {
                 var anyMasterCurves = false
 
                 for master in indices {
+                    guard contourIndex < self[master].contours.count else {
+                        continue
+                    }
                     let contour = self[master].contours[contourIndex]
                     guard segmentIndex < contour.segments.count,
                           case .arc(let arc) = contour.segments[segmentIndex] else {
@@ -60,6 +71,9 @@ extension Array where Element == OutlinePath {
                 }
 
                 for master in indices {
+                    guard contourIndex < self[master].contours.count else {
+                        continue
+                    }
                     let contour = self[master].contours[contourIndex]
                     guard segmentIndex < contour.segments.count else {
                         continue
@@ -88,7 +102,7 @@ extension Array where Element == OutlinePath {
                 }
             }
 
-            for master in indices {
+            for master in indices where contourIndex < self[master].contours.count {
                 result[master].append(.close)
             }
         }

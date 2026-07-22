@@ -7,11 +7,11 @@ import GriddyDocument
 
 /// The validation and preview strip along the bottom of the document window.
 ///
-/// Milestone 1 shows the strip's structure with the validation engine not yet
-/// wired up. Tiered validation arrives in Milestone 7. See spec 8.7 and 15.3.
+/// See spec 8.7 and 15.3.
 struct BottomStrip: View {
 
     let document: SymbolDocument
+    let state: ValidationState
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -25,26 +25,45 @@ struct BottomStrip: View {
 
     private var validationSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionHeader("Validation")
+            HStack(spacing: 6) {
+                sectionHeader("Validation")
+                if state.isRecomputing {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .help("Rechecking the geometry")
+                }
+            }
 
-            if document.validationState.issues.isEmpty {
-                Label("No issues", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+            if state.issues.isEmpty {
+                Label(state.lastValidatedAt == nil ? "Not yet checked"
+                                                   : "No issues",
+                      systemImage: state.lastValidatedAt == nil
+                        ? "circle.dotted" : "checkmark.circle.fill")
+                    .foregroundStyle(state.lastValidatedAt == nil
+                                     ? AnyShapeStyle(.secondary)
+                                     : AnyShapeStyle(.green))
                     .font(.callout)
                     .lineLimit(1)
             } else {
-                ForEach(document.validationState.issues) { issue in
+                // Sorted so an error is never hidden below a note.
+                ForEach(sortedIssues) { issue in
                     Label(issue.message, systemImage: symbolName(for: issue.severity))
                         .foregroundStyle(color(for: issue.severity))
                         .font(.callout)
-                        .lineLimit(1)
+                        .lineLimit(2)
                         .truncationMode(.tail)
+                        .help(issue.suggestedFix ?? issue.message)
                 }
             }
 
             Spacer(minLength: 0)
         }
         .padding(16)
+        // Dimmed rather than blanked while the geometric tier reruns: a strip
+        // that empties on every keystroke is harder to read than one that lags.
+        // See spec 15.3.
+        .opacity(state.isRecomputing ? 0.55 : 1)
+        .animation(.easeOut(duration: 0.15), value: state.isRecomputing)
         // No minimum width, and every label truncates rather than demanding
         // room. Any hard minimum here is added to the detail column's minimum
         // width, which the window's split view must then find somewhere: with
@@ -88,6 +107,14 @@ struct BottomStrip: View {
         }
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Errors first, then warnings, then notes.
+    private var sortedIssues: [ValidationIssue] {
+        let rank: [ValidationSeverity: Int] = [.error: 0, .warning: 1, .info: 2]
+        return state.issues.sorted {
+            (rank[$0.severity] ?? 3) < (rank[$1.severity] ?? 3)
+        }
     }
 
     private func sectionHeader(_ title: String) -> some View {
