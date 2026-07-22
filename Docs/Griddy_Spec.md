@@ -873,7 +873,19 @@ Three consequences.
 
 **The failure is ordinary, not exotic.** The rejected symbol was a circle unioned with an overlapping line: two primitives. Boolean resolution cut the outlines at different places as the stroke width changed, giving 2 subpaths at every weight but 20, 22 and 22 path commands. Anything that overlaps will do this.
 
-**Griddy's own cheap check agrees with Apple's verdict.** The export that was rejected had already warned that the masters "will not interpolate until reconciled". Comparing subpath *and* command counts is enough to predict the refusal, which is what makes the Tier 2 check in §15.1 worth running continuously.
+**Counting is not enough; the command sequences must match element for element.** A second export was refused with the same message despite every master carrying 2 subpaths and exactly 50 path commands. The sequences were:
+
+```text
+Ultralight   M C L L L C C C C C L L L L ...
+Regular      M C C L L L C C C C C L L ...
+Black        M C C C L L L C C C L L ...
+```
+
+Identical lengths, different kinds at the same index. Interpolation pairs command *i* with command *i*, and a straight line cannot interpolate with a curve however well the totals agree. The requirement is that the masters share a command *sequence*, not a command *count*.
+
+This falls out of reconciliation working on outline segments while export writes path commands: a segment that boolean resolution left straight in one master and curved in another satisfies the segment-level check and still fails Apple's. Export therefore emits a curve for every master wherever any master curves at that position — a straight run is exactly a cubic with its control points a third and two thirds along, so nothing about the shape changes.
+
+**Griddy's cheap check predicts the refusal only partly.** The count comparison caught the first rejection but passed the second. Continuous validation (§15.1) should compare sequences, which is no more expensive and is the property Apple actually tests.
 
 #### Unreconcilable Masters Are Rejected Loudly
 

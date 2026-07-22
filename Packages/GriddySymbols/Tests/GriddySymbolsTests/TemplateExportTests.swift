@@ -254,6 +254,47 @@ struct ExportReportTests {
                 "unexpected warnings: \(report.warnings)")
     }
 
+    @Test("Every master emits the same sequence of command kinds")
+    func commandKindsAlign() throws {
+        let package = try drawnDocument()
+        let (data, _) = try SFSymbolTemplateExporter.export(
+            document: package.document, sourceTemplate: package.sourceTemplate)
+        let reimported = try SFSymbolTemplateImporter.import(data)
+
+        // Matching counts is not enough, and this is the check that says so.
+        // Interpolation pairs command i with command i, so a line in one master
+        // opposite a cubic in another is not interpolatable however well the
+        // totals agree. An export with 50 commands in every master was still
+        // refused by the SF Symbols app for exactly this.
+        func kinds(_ weight: SymbolWeight) -> [String] {
+            guard let variant = reimported.variants[
+                SymbolSlot(weight: weight, scale: .small)] else {
+                return []
+            }
+            return variant.commands.map { command in
+                switch command {
+                case .move: "M"
+                case .line: "L"
+                case .cubic: "C"
+                case .close: "Z"
+                }
+            }
+        }
+
+        let reference = kinds(.regular)
+        #expect(!reference.isEmpty)
+
+        for weight in SymbolWeight.authored {
+            let sequence = kinds(weight)
+            let mismatches = zip(reference, sequence).enumerated()
+                .filter { $0.element.0 != $0.element.1 }
+                .map { "\($0.offset):\($0.element.0)/\($0.element.1)" }
+
+            #expect(sequence == reference,
+                    "\(weight.rawValue) differs at \(mismatches.prefix(8))")
+        }
+    }
+
     @Test("Arcs expanding to cubics does not undo the reconciliation")
     func cubicExpansionStaysReconciled() throws {
         let package = try drawnDocument()

@@ -40,14 +40,18 @@ extension Array where Element == OutlinePath {
 
             let segmentCount = reference.contours[contourIndex].segments.count
             for segmentIndex in 0..<segmentCount {
-                // The number of pieces this segment takes in any master.
+                // How many pieces this segment takes in any master, and whether
+                // any master curves here.
                 var pieces = 1
+                var anyMasterCurves = false
+
                 for master in indices {
                     let contour = self[master].contours[contourIndex]
                     guard segmentIndex < contour.segments.count,
                           case .arc(let arc) = contour.segments[segmentIndex] else {
                         continue
                     }
+                    anyMasterCurves = true
                     pieces = Swift.max(pieces, ArcToCubic.segmentCount(for: arc))
                 }
 
@@ -58,16 +62,15 @@ extension Array where Element == OutlinePath {
                     }
 
                     switch contour.segments[segmentIndex] {
-                    case .line(_, let to):
-                        // A line matched against an arc still has to yield the
-                        // same number of commands, so it is subdivided too.
-                        let from = contour.segments[segmentIndex].start
-                        for piece in 1...pieces {
-                            let t = Double(piece) / Double(pieces)
-                            result[master].append(.line(to: transform(
-                                IconPoint(x: from.x + (to.x - from.x) * t,
-                                          y: from.y + (to.y - from.y) * t))))
-                        }
+                    case .line(let from, let to):
+                        // Matching command *counts* is not enough: interpolation
+                        // pairs command i with command i, and a line cannot
+                        // interpolate with a cubic. Where any master curves
+                        // here, every master emits cubics -- a line is exactly a
+                        // cubic with its controls a third and two thirds along.
+                        result[master].append(contentsOf: pieceCommands(
+                            from: from, to: to, pieces: pieces,
+                            asCurve: anyMasterCurves, transform: transform))
 
                     case .arc(let arc):
                         for cubic in ArcToCubic.cubics(for: arc, count: pieces) {
@@ -85,6 +88,40 @@ extension Array where Element == OutlinePath {
             }
         }
         return result
+    }
+
+    /// A straight run, emitted either as lines or as equivalent cubics.
+    private func pieceCommands(from: IconPoint,
+                               to: IconPoint,
+                               pieces: Int,
+                               asCurve: Bool,
+                               transform: (IconPoint) -> IconPoint)
+    -> [SVGPathCommand] {
+        var commands: [SVGPathCommand] = []
+
+        for piece in 1...pieces {
+            let previous = Double(piece - 1) / Double(pieces)
+            let next = Double(piece) / Double(pieces)
+
+            func along(_ t: Double) -> IconPoint {
+                IconPoint(x: from.x + (to.x - from.x) * t,
+                          y: from.y + (to.y - from.y) * t)
+            }
+
+            let end = along(next)
+
+            if asCurve {
+                // Controls a third and two thirds along reproduce the straight
+                // line exactly; nothing about the shape changes.
+                let third = (next - previous) / 3
+                commands.append(.cubic(control1: transform(along(previous + third)),
+                                       control2: transform(along(next - third)),
+                                       to: transform(end)))
+            } else {
+                commands.append(.line(to: transform(end)))
+            }
+        }
+        return commands
     }
 }
 
