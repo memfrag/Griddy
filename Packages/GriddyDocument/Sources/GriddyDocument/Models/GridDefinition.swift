@@ -16,24 +16,78 @@ public struct GridDefinition: Codable, Hashable, Sendable {
     public var safeArea: IconRect
     public var primaryInterval: Double
     public var secondaryDivisions: Int
-    public var showsPrimaryGrid: Bool
-    public var showsSecondaryGrid: Bool
+    public var visibleGuides: GuideSet
     public var snapTolerance: Double
 
     public init(canvasSize: IconSize,
                 safeArea: IconRect,
                 primaryInterval: Double = 1.0,
                 secondaryDivisions: Int = 4,
-                showsPrimaryGrid: Bool = true,
-                showsSecondaryGrid: Bool = true,
+                visibleGuides: GuideSet = .default,
                 snapTolerance: Double = 0.125) {
         self.canvasSize = canvasSize
         self.safeArea = safeArea
         self.primaryInterval = primaryInterval
         self.secondaryDivisions = secondaryDivisions
-        self.showsPrimaryGrid = showsPrimaryGrid
-        self.showsSecondaryGrid = showsSecondaryGrid
+        self.visibleGuides = visibleGuides
         self.snapTolerance = snapTolerance
+    }
+
+    public var showsPrimaryGrid: Bool {
+        get { visibleGuides.contains(.primaryGrid) }
+        set { visibleGuides.set(.primaryGrid, to: newValue) }
+    }
+
+    public var showsSecondaryGrid: Bool {
+        get { visibleGuides.contains(.secondaryGrid) }
+        set { visibleGuides.set(.secondaryGrid, to: newValue) }
+    }
+
+    // MARK: Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case canvasSize, safeArea, primaryInterval, secondaryDivisions
+        case visibleGuides, snapTolerance
+        case showsPrimaryGrid, showsSecondaryGrid
+    }
+
+    /// Decodes documents written before guides became a set.
+    ///
+    /// Those files carry `showsPrimaryGrid` and `showsSecondaryGrid` and know
+    /// nothing of the other four guides, which take their default visibility.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        canvasSize = try container.decode(IconSize.self, forKey: .canvasSize)
+        safeArea = try container.decode(IconRect.self, forKey: .safeArea)
+        primaryInterval = try container.decode(Double.self, forKey: .primaryInterval)
+        secondaryDivisions = try container.decode(Int.self, forKey: .secondaryDivisions)
+        snapTolerance = try container.decode(Double.self, forKey: .snapTolerance)
+
+        if let guides = try container.decodeIfPresent(
+            GuideSet.self, forKey: .visibleGuides) {
+            visibleGuides = guides
+        } else {
+            visibleGuides = .default
+            if let shows = try container.decodeIfPresent(
+                Bool.self, forKey: .showsPrimaryGrid) {
+                visibleGuides.set(.primaryGrid, to: shows)
+            }
+            if let shows = try container.decodeIfPresent(
+                Bool.self, forKey: .showsSecondaryGrid) {
+                visibleGuides.set(.secondaryGrid, to: shows)
+            }
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(canvasSize, forKey: .canvasSize)
+        try container.encode(safeArea, forKey: .safeArea)
+        try container.encode(primaryInterval, forKey: .primaryInterval)
+        try container.encode(secondaryDivisions, forKey: .secondaryDivisions)
+        try container.encode(visibleGuides, forKey: .visibleGuides)
+        try container.encode(snapTolerance, forKey: .snapTolerance)
     }
 
     /// The spacing of the secondary grid, in units.

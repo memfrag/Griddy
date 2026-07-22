@@ -31,11 +31,19 @@ struct DocumentSidebar: View {
                     .tag(SidebarSelection.symbol)
             }
 
+            // Every guide, not just the two grids. Listing a subset here while
+            // the canvas drew six was most of why the canvas was hard to read:
+            // four of them could not be turned off, or even named.
             Section("Construction") {
                 Label("\(gridDescription) Grid", systemImage: "grid")
                     .tag(SidebarSelection.grid)
-                Toggle("Primary Grid", isOn: $document.grid.showsPrimaryGrid)
-                Toggle("Secondary Grid", isOn: $document.grid.showsSecondaryGrid)
+
+                ForEach(GuideSet.ordered, id: \.guide.rawValue) { entry in
+                    Toggle(entry.name, isOn: Binding(
+                        get: { document.grid.visibleGuides.contains(entry.guide) },
+                        set: { document.grid.visibleGuides.set(entry.guide, to: $0) }
+                    ))
+                }
             }
 
             Section("Key Shapes") {

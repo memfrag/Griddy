@@ -35,10 +35,33 @@ struct CanvasToolbar: ToolbarContent {
             .pickerStyle(.menu)
             .help("Active weight master")
 
-            Toggle(isOn: $document.grid.showsPrimaryGrid) {
-                Label("Grid", systemImage: "grid")
+            // A menu rather than a row of toggles: there are six guides, and
+            // they are set-and-forget rather than something to reach for
+            // mid-drag. Iterating GuideSet.ordered keeps the menu in step with
+            // the guides that exist.
+            Menu {
+                ForEach(GuideSet.ordered, id: \.guide.rawValue) { entry in
+                    Toggle(entry.name, isOn: Binding(
+                        get: { document.grid.visibleGuides.contains(entry.guide) },
+                        set: { document.grid.visibleGuides.set(entry.guide, to: $0) }
+                    ))
+                }
+
+                Divider()
+
+                Button("Show All") {
+                    document.grid.visibleGuides = .all
+                }
+                Button("Hide All") {
+                    document.grid.visibleGuides = []
+                }
+                Button("Reset to Default") {
+                    document.grid.visibleGuides = .default
+                }
+            } label: {
+                Label("Guides", systemImage: "grid")
             }
-            .help("Show grid")
+            .help("Which construction guides the canvas draws")
         }
     }
 }

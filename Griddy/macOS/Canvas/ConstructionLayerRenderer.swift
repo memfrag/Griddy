@@ -24,27 +24,42 @@ struct ConstructionLayerRenderer {
         document.coordinateSystem.capHeightBox
     }
 
+    private var guides: GuideSet {
+        document.grid.visibleGuides
+    }
+
     func draw(in context: inout GraphicsContext) {
         drawCanvasFill(in: &context)
 
-        if document.grid.showsSecondaryGrid {
+        if guides.contains(.secondaryGrid) {
             drawGrid(in: &context,
                      interval: document.grid.secondaryInterval,
                      color: .gridSecondary,
                      lineWidth: 0.5)
         }
 
-        if document.grid.showsPrimaryGrid {
+        if guides.contains(.primaryGrid) {
             drawGrid(in: &context,
                      interval: document.grid.primaryInterval,
                      color: .gridPrimary,
                      lineWidth: 0.75)
         }
 
-        drawKeyShapes(in: &context)
-        drawSafeArea(in: &context)
-        drawBaselineAndCapline(in: &context)
-        drawCanvasBorder(in: &context)
+        if guides.contains(.keyShapes) {
+            drawKeyShapes(in: &context)
+        }
+
+        if guides.contains(.safeArea) {
+            drawSafeArea(in: &context)
+        }
+
+        if guides.contains(.baseline) {
+            drawBaselineAndCapline(in: &context)
+        }
+
+        if guides.contains(.margins) {
+            drawMargins(in: &context)
+        }
     }
 
     // MARK: Pieces
@@ -135,17 +150,15 @@ struct ConstructionLayerRenderer {
                        style: StrokeStyle(lineWidth: 1, dash: [6, 3]))
     }
 
-    /// Draws the two regions that mean something.
+    /// The real horizontal bound on artwork, drawn as an actual edge.
     ///
-    /// The cap-height box is a light reference; the margin box is the real
-    /// horizontal bound on artwork, so it is drawn as an actual edge. Earlier
-    /// this drew a single border around the cap-height box, which read as "keep
-    /// your artwork inside here" -- advice that every real symbol violates.
-    private func drawCanvasBorder(in context: inout GraphicsContext) {
-        context.stroke(Path(transform.rect(capHeightBox)),
-                       with: .color(.capHeightBox),
-                       style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
-
+    /// This used to also stroke the cap-height box. Nothing was gained: the
+    /// box's horizontal edges are the baseline and capline, already drawn above
+    /// in blue, so the canvas carried two dashed strokes along the same two
+    /// lines; and its vertical edges sit on the design area's own edges, which
+    /// bound nothing. Six guide systems is already a lot to read without
+    /// drawing two of them twice.
+    private func drawMargins(in context: inout GraphicsContext) {
         let margins = document.coordinateSystem.marginBox
         var edges = Path()
         for x in [margins.minX, margins.maxX] {
@@ -161,7 +174,6 @@ struct ConstructionLayerRenderer {
 private extension Color {
 
     static let canvasFill = Color(nsColor: .textBackgroundColor)
-    static let capHeightBox = Color.secondary.opacity(0.4)
     static let marginEdge = Color.orange.opacity(0.55)
     static let gridPrimary = Color.secondary.opacity(0.28)
     static let gridSecondary = Color.secondary.opacity(0.12)
