@@ -27,32 +27,32 @@ struct ArtworkLayerRenderer {
 
     // MARK: Artwork
 
-    /// Strokes the centerline at the resolved width.
+    /// Fills the primitive's analytic outline.
     ///
-    /// This approximates what export will produce. It is not outlining: there
-    /// is no analytic outline and no boolean resolution here, so overlapping
-    /// primitives simply paint over each other. Milestone 3 replaces this for
-    /// export purposes. See spec 10.5.
+    /// This is the real outlining pipeline, the same geometry export uses --
+    /// not a stroked approximation. Boolean resolution is not applied here:
+    /// overlapping primitives are filled independently, which for monochrome
+    /// artwork in a single colour is visually identical to their union. The
+    /// difference shows up in the exported path structure and in subtract
+    /// operations, which is where the solver matters. See spec 10.5.
     private func drawFill(_ primitive: IconPrimitive,
                           in context: inout GraphicsContext) {
-        let path = PrimitivePath.path(for: primitive, transform: transform)
+        let width = document.strokeWidth(for: primitive, weight: editor.activeWeight)
+
+        guard let outline = Outliner.outline(primitive, width: width),
+              !outline.isEmpty else {
+            return
+        }
+
+        let path = outline.cgPath(transform: transform)
         guard !path.isEmpty else {
             return
         }
 
-        let width = document.strokeWidth(for: primitive, weight: editor.activeWeight)
-        let stroke = primitive.attributes.stroke
-
-        context.stroke(
-            path,
-            with: .color(.artwork),
-            style: StrokeStyle(
-                lineWidth: max(1, transform.length(width)),
-                lineCap: stroke.lineCap.cgLineCap,
-                lineJoin: stroke.lineJoin.cgLineJoin,
-                miterLimit: stroke.miterLimit
-            )
-        )
+        // Non-zero winding, because the outliner orients outer boundaries
+        // counterclockwise and holes clockwise. Even-odd would fill a ring's
+        // hole whenever another contour happened to overlap it.
+        context.fill(path, with: .color(.artwork), style: FillStyle(eoFill: false))
     }
 
     // MARK: Drag preview
@@ -61,17 +61,18 @@ struct ArtworkLayerRenderer {
         guard let preview = editor.drag?.previewPrimitive else {
             return
         }
-        let path = PrimitivePath.path(for: preview, transform: transform)
-        guard !path.isEmpty else {
+        let width = document.strokeWidth(for: preview, weight: editor.activeWeight)
+        guard let outline = Outliner.outline(preview, width: width) else {
             return
         }
 
-        let width = document.strokeWidth(for: preview, weight: editor.activeWeight)
-        context.stroke(path,
-                       with: .color(.artworkPreview),
-                       style: StrokeStyle(lineWidth: max(1, transform.length(width)),
-                                          lineCap: .round,
-                                          lineJoin: .round))
+        let path = outline.cgPath(transform: transform)
+        guard !path.isEmpty else {
+            return
+        }
+        context.fill(path,
+                     with: .color(.artworkPreview),
+                     style: FillStyle(eoFill: false))
     }
 
     // MARK: Selection
