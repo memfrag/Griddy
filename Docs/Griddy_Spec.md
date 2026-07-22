@@ -190,6 +190,7 @@ User sees previews:
 3. Blocking errors must be fixed or explicitly bypassed if safe.
 4. Griddy generates an SVG preserving required SF Symbols structure, with the three authored masters written into the template's three slots and reconciled so they interpolate (§14.5).
 5. User imports the SVG into Apple's SF Symbols app as the final authority.
+6. User assigns fill and erase layers there. That step belongs to the SF Symbols app and cannot be done in Griddy or carried in the SVG (§14.6).
 
 ## 8. UX Specification
 
@@ -940,6 +941,8 @@ enum SymbolRenderingRole: String, Codable {
 
 The MVP should focus on monochrome. The rendering-role model exists to avoid painting the architecture into a corner.
 
+Note that `renderingRole` and `SymbolLayerRole.cutout` are **internal only**: fill and erase layers are assigned in the SF Symbols app after import and are not carried in the SVG, so nothing here survives export. See §14.6, which also explains why this makes exported subpath ordering load-bearing.
+
 ### 13.5 Masters
 
 ```swift
@@ -1069,6 +1072,32 @@ Griddy document
 The three master solves are independent and may run concurrently. The reconciliation that follows is not: it needs all three at once, which is the one genuine barrier in the pipeline.
 
 A failure in any single master fails the export, reported with the master identified, rather than producing a partially-populated template. A reconciliation that cannot be completed — because the masters are genuinely topologically different — fails the export naming the primitive responsible, rather than inventing a correspondence that does not exist (§12.6).
+
+### 14.6 Layer Semantics Are Assigned Downstream
+
+**Fill and erase layers are assigned in the SF Symbols app after import. They are not encoded in the SVG.** A template's artwork is a single `<path>` per slot whose subpaths carry no annotation distinguishing a filled region from an erased one — an erase layer and an ordinary hole look identical in the file. The distinction lives in the SF Symbols app's own document, not in the interchange format.
+
+Three consequences, and the third is the one that constrains the exporter.
+
+**Griddy cannot export layer semantics.** `SymbolRenderingRole` and `SymbolLayerRole.cutout` (§13.4) are internal modelling. They inform Griddy's own rendering and validation and are stored in the `.griddy` document, but they do not survive the SVG boundary. The specification should not imply otherwise.
+
+**The workflow past export is one-way.** A designer exports from Griddy, imports into SF Symbols, and assigns layers there. Nothing carries that assignment back. This is a property of the format, not a gap in Griddy.
+
+**Exported subpath order is therefore load-bearing, and must be stable.** The designer's layer assignment is keyed to subpath position within the exported path. If they assign "erase" to the fourth subpath, return to Griddy, make an unrelated edit, and re-export, the fourth subpath must still be the same piece of geometry — otherwise their assignment silently attaches to the wrong region, and nothing in either tool will report it.
+
+This is not automatic. Two parts of the pipeline would otherwise produce incidental ordering:
+
+- Boolean stitching (§10.5) emits contours in whatever order the walk happens to find them, which depends on input order and on which segments matched first.
+- The compatibility pass (§12.6) inserts contours and pairs them across masters.
+
+Export must therefore impose a deterministic order rather than accepting the solver's:
+
+1. Order by layer, following the document's layer order.
+2. Within a layer, order by a stable geometric key — bounding-box origin, then area — chosen so that a small edit to one contour does not reorder the others.
+3. Contours inserted by the compatibility pass go last, never interleaved.
+4. Report in the export report when the subpath count or order changes from the previous export of the same document, since that is precisely when a downstream layer assignment has been invalidated.
+
+Point 4 matters more than it looks. It is the only opportunity either tool has to tell the designer that work they did in the SF Symbols app has just been undermined.
 
 ## 15. Validation
 

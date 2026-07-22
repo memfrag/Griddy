@@ -350,6 +350,29 @@ struct TemplateRejectionTests {
         }
     }
 
+    @Test("Every path in a variant group is read, not just the first")
+    func multiplePathsPerVariant() throws {
+        // Apple's templates put the artwork in one path with several subpaths,
+        // but a group holding several paths renders as their union. Reading
+        // only the first would silently drop geometry.
+        let svg = """
+        <svg><g id="Symbols"><g id="Regular-S">
+        <path d="M0,0 L1,0 L1,1 Z"/>
+        <path d="M5,5 L6,5 L6,6 Z"/>
+        </g></g>
+        <g id="Guides">
+        <line id="Baseline-S" x1="0" y1="100" x2="10" y2="100"/>
+        <line id="Capline-S" x1="0" y1="30" x2="10" y2="30"/>
+        </g></svg>
+        """
+
+        let template = try SFSymbolTemplateImporter.import(Data(svg.utf8))
+        let variant = try #require(
+            template.variants[SymbolSlot(weight: .regular, scale: .small)])
+
+        #expect(variant.subpathCount == 2, "both paths contribute")
+    }
+
     @Test("Unrecognised slot identifiers are skipped, not fatal")
     func unknownSlotIdentifiers() throws {
         let template = try SFSymbolTemplateImporter.import(Fixture.authoring)

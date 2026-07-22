@@ -126,8 +126,16 @@ public enum SFSymbolTemplateImporter {
             guard let id = element.id, let slot = slot(fromElementID: id) else {
                 continue
             }
-            guard let path = element.descendants(where: { $0.name == "path" }).first,
-                  let data = path.attributes["d"] else {
+            // Every path in the group, not just the first. The templates seen
+            // so far carry one path per variant with the artwork as subpaths
+            // inside it, but a group holding several would render as their
+            // union, and reading only the first would silently drop geometry.
+            let data = element
+                .descendants { $0.name == "path" }
+                .compactMap { $0.attributes["d"] }
+                .joined(separator: " ")
+
+            guard !data.isEmpty else {
                 continue
             }
 
