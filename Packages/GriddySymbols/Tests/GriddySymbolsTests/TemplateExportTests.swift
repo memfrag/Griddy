@@ -254,6 +254,54 @@ struct ExportReportTests {
                 "unexpected warnings: \(report.warnings)")
     }
 
+    @Test("The document's name reaches the export and round-trips")
+    func nameRoundTrips() throws {
+        var package = try drawnDocument()
+        package.document.metadata.name = "custom.my.great.symbol"
+
+        let (data, _) = try SFSymbolTemplateExporter.export(
+            document: package.document, sourceTemplate: package.sourceTemplate)
+
+        // Before this, export copied the root group and title through from the
+        // source template untouched, so renaming a document had no effect and
+        // the name round-tripped to whatever template it was imported from.
+        let text = String(decoding: data, as: UTF8.self)
+        #expect(text.contains("<title>custom.my.great.symbol</title>"))
+        #expect(text.contains("<g id=\"custom.my.great.symbol\""))
+        #expect(!text.contains("custom.cup.and.bag"))
+
+        let reimported = try SFSymbolTemplateImporter.importDocument(
+            data, appVersion: "1.0.0")
+        #expect(reimported.document.metadata.name == "custom.my.great.symbol")
+    }
+
+    @Test("Renaming leaves the structural groups alone")
+    func renamingSparesStructuralGroups() throws {
+        var package = try drawnDocument()
+        package.document.metadata.name = "Notes"
+
+        let (data, _) = try SFSymbolTemplateExporter.export(
+            document: package.document, sourceTemplate: package.sourceTemplate)
+        let text = String(decoding: data, as: UTF8.self)
+
+        // Naming a symbol after a structural group must not collide with it.
+        #expect(text.contains("<g id=\"Guides\""))
+        #expect(text.contains("<g id=\"Symbols\""))
+        #expect(try SFSymbolTemplateImporter.import(data).variants.count >= 3)
+    }
+
+    @Test("A template recording no name exports unchanged")
+    func appleFormatCarriesNoName() throws {
+        // Templates straight out of the SF Symbols app have no title and no
+        // wrapper group -- the name lives in the filename. Substitution must be
+        // a no-op there rather than inventing a place to put it.
+        let apple = """
+            <svg><g id="Notes"></g><g id="Symbols"></g></svg>
+            """
+        #expect(SFSymbolTemplateExporter.substitute(
+            symbolName: "custom.whatever", in: apple) == apple)
+    }
+
     @Test("Every master emits the same sequence of command kinds")
     func commandKindsAlign() throws {
         let package = try drawnDocument()

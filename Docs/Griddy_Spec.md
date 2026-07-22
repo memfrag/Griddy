@@ -640,9 +640,15 @@ Union, subtract, and intersect are all supported (§10.4).
 
 **Why the solver cannot be avoided.** There is an obvious-looking shortcut: skip boolean resolution, emit each primitive's outline as its own subpath, and let overlaps union implicitly under non-zero winding. That would also make masters interpolatable for free, since the path structure would be fixed by the primitive graph rather than by where intersections happen to fall.
 
-It does not work. Template artwork inherits `fill-rule="evenodd"` from the root group, and under even-odd an overlap is *subtracted* rather than merged: a circle crossed by a line would export with a bite taken out of it. Non-overlapping outlines are therefore a requirement of the format, not a preference, and producing them needs a real solver.
+**Corrected.** This section previously argued the shortcut was impossible, on the grounds that template artwork inherits `fill-rule="evenodd"` from the root group, so an overlap would be *subtracted* rather than merged. That argument was wrong, and the way it was wrong is worth recording.
 
-This also means overlapping and non-overlapping geometry look identical in Griddy but not in the SF Symbols app, because Griddy's canvas fills with non-zero winding to show the intended union while a boolean-resolved export is non-overlapping and reads the same under either rule. The two agree only because export resolves the overlaps; they would diverge immediately if it stopped.
+The `evenodd` was real but not Apple's. It appears exactly once across every template examined, on the wrapper group of a file that had been opened and re-saved in Sketch — which is also where that file's `<title>` and `custom.<name>` root group came from. Templates written by the SF Symbols app itself (`Generator: Apple Native CoreSVG`) carry **no `fill-rule` attribute at all**, which is SVG's default `nonzero`. Under `nonzero`, overlapping subpaths do merge, and the shortcut would produce the intended union.
+
+The conclusion was reached by reading one attribute in one file without checking where the file came from. The two files that would have contradicted it were on disk throughout.
+
+**So why keep the solver.** The shortcut is viable for unions and only for unions. Subtraction has no winding-rule equivalent — a genuine cutout needs a reversed contour placed correctly, which is the solver's job. And the solver produces minimal non-overlapping outlines rather than a pile of stacked subpaths, which keeps node counts down and makes the exported path something a designer can reason about in the SF Symbols app. Those are good reasons. "The format forbids it" was not one, and the spec should not have claimed it.
+
+> **Open Question:** Whether a winding-union export would be *preferable* for pure-union symbols, since its path structure is fixed by the primitive graph and would be interpolatable without the compatibility pass (§12.6) and its node inflation. Not investigated. The solver path works and is verified end to end; this would be an optimisation, not a fix.
 
 **Consequence for interpolation.** Boolean results are weight-dependent: the number and position of intersections between two outlines changes as stroke width changes, so two masters of the same symbol can legitimately have different path structure. Because export must supply three masters that interpolate (§12.2), that difference has to be reconciled — by a compatibility pass applied to the finished paths (§12.6), not by constraining the solver. The solver stays free; reconciliation happens once, at the end, where it can be checked.
 
@@ -1094,6 +1100,18 @@ SVG file
 ```
 
 This same pipeline runs for `Resources/BlankSymbolTemplate.svg` when creating a new document (§7.1).
+
+#### Template Provenance: Two Dialects, Not One
+
+Templates reach Griddy in two shapes, and conflating them has already caused one wrong conclusion (§10.5).
+
+**As written by the SF Symbols app** (`Generator: Apple Native CoreSVG`): `Notes`, `Guides` and `Symbols` sit at the document root with no wrapper. No `<title>`, no `fill-rule`, no symbol name anywhere in the file — the name lives in the filename. Transforms are `matrix(…)`. Wireframe styling comes from a `<style>` block and `class="SFSymbolsPreviewWireframe"`.
+
+**After a round trip through a vector editor**: the editor wraps everything in a group named after the symbol, adds a `<title>`, adds its own `Group` layer, rewrites transforms as `translate(…)`, and inlines styling as attributes — including a `fill-rule` on the wrapper that the original never had. Sketch does all of this on import, which is why a template opened there displays a `Group` node that is not in the file on disk.
+
+Both dialects import correctly and both export successfully; the SF Symbols app accepts either. But **only the editor dialect records a symbol name**, so name substitution (§14.5) is a no-op on Apple's own files and correctly so.
+
+`Resources/BlankSymbolTemplate.svg` is currently derived from an editor-processed template, and therefore carries the wrapper group and the spurious `fill-rule`. This is cosmetically wrong but functionally harmless, and it is the structure the verified export path was tested against. Regenerating it from a pristine Apple template is worth doing deliberately, with fixture coverage of both dialects, rather than as a drive-by.
 
 ### 14.3 Path-to-Primitive Inference
 

@@ -177,6 +177,8 @@ public enum SFSymbolTemplateExporter {
                 to: document.coordinateSystem.templatePoint(from: point))
         }
 
+        text = substitute(symbolName: document.metadata.name, in: text)
+
         for (index, weight) in SymbolWeight.authored.enumerated() {
             let slot = SymbolSlot(weight: weight, scale: scale)
             guard let variant = template.variants[slot] else {
@@ -282,6 +284,50 @@ public enum SFSymbolTemplateExporter {
             found[id] = transform
         }
         return found
+    }
+
+    /// Writes the document's name wherever the template records a symbol name.
+    ///
+    /// Templates that came straight out of the SF Symbols app record no name at
+    /// all: their root is `Notes`/`Guides`/`Symbols` with no wrapper, and the
+    /// name lives in the filename. A template that has been through a vector
+    /// editor gains a `<title>` and a root group named after the symbol, and
+    /// ``SFSymbolTemplateImporter/symbolName(in:)`` reads them back. Griddy's own
+    /// blank template is such a file, so without this the name never reaches the
+    /// export and a renamed document round-trips to whatever the template
+    /// happened to be called.
+    ///
+    /// A no-op on templates carrying no name, which is the correct behaviour for
+    /// Apple's own format rather than a gap. See spec 14.5.
+    static func substitute(symbolName name: String, in text: String) -> String {
+        guard let existing = currentSymbolName(in: text), existing != name else {
+            return text
+        }
+        return text
+            .replacingOccurrences(of: "<title>\(existing)</title>",
+                                  with: "<title>\(name)</title>")
+            .replacingOccurrences(of: "<g id=\"\(existing)\"",
+                                  with: "<g id=\"\(name)\"")
+    }
+
+    /// The name the template currently records, if it records one.
+    private static func currentSymbolName(in text: String) -> String? {
+        if let open = text.range(of: "<title>"),
+           let close = text.range(of: "</title>", range: open.upperBound..<text.endIndex) {
+            let title = String(text[open.upperBound..<close.lowerBound])
+            if !title.isEmpty {
+                return title
+            }
+        }
+
+        // No title, so fall back to a root group named for the symbol. Matched
+        // on the "custom." prefix rather than position: the structural groups
+        // are named Notes/Guides/Symbols/Group and must never be renamed.
+        guard let start = text.range(of: "<g id=\"custom."),
+              let end = text.range(of: "\"", range: start.upperBound..<text.endIndex) else {
+            return nil
+        }
+        return "custom." + text[start.upperBound..<end.lowerBound]
     }
 
     /// Replaces the path data inside a slot group, or inserts a path when the
