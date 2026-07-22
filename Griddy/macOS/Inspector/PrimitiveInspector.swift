@@ -25,6 +25,8 @@ struct PrimitiveInspector: View {
                 geometryFields
             }
 
+            ConstraintSection(file: file, editor: editor, primitive: primitive)
+
             Section("Stroke") {
                 LabeledContent("Width") {
                     Text(format(file.document.strokeWidth(for: primitive,

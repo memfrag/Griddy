@@ -35,21 +35,49 @@ extension OutlineContour {
                 path.addLine(to: transform.point(to))
 
             case .arc(let arc):
-                // Unit space has Y increasing upward and view space downward,
-                // so angles negate and the sweep direction inverts. Getting
-                // this wrong draws the complementary arc, which looks plausible
-                // until the shape is checked against its own endpoints.
-                path.addArc(
-                    center: transform.point(arc.center),
-                    radius: transform.length(arc.radius),
-                    startAngle: .radians(-arc.startAngle.radians),
-                    endAngle: .radians(-arc.endAngle.radians),
-                    clockwise: !arc.isClockwise,
-                    transform: .identity
-                )
+                append(arc, to: &path, transform: transform)
             }
         }
 
         path.closeSubpath()
+    }
+
+    private func append(_ arc: ArcSegment,
+                        to path: inout Path,
+                        transform: CanvasTransform) {
+        // A full circle is one arc whose start and end angles coincide, and
+        // `addArc` with equal angles draws nothing at all. Emitting it as two
+        // half turns keeps it visible while preserving the sweep direction,
+        // which `addEllipse` would discard -- and direction is what makes a
+        // hole subtract under non-zero winding.
+        let turn = 2 * Double.pi
+        if abs(arc.sweep - turn) < 1e-9 {
+            let half = arc.isClockwise ? -Double.pi : Double.pi
+            let middle = IconAngle(radians: arc.startAngle.radians + half)
+            addArc(arc, from: arc.startAngle, to: middle, to: &path, transform: transform)
+            addArc(arc, from: middle, to: arc.endAngle, to: &path, transform: transform)
+            return
+        }
+        addArc(arc, from: arc.startAngle, to: arc.endAngle,
+               to: &path, transform: transform)
+    }
+
+    private func addArc(_ arc: ArcSegment,
+                        from start: IconAngle,
+                        to end: IconAngle,
+                        to path: inout Path,
+                        transform: CanvasTransform) {
+        // Unit space has Y increasing upward and view space downward, so angles
+        // negate and the sweep direction inverts. Getting this wrong draws the
+        // complementary arc, which looks plausible until the shape is checked
+        // against its own endpoints.
+        path.addArc(
+            center: transform.point(arc.center),
+            radius: transform.length(arc.radius),
+            startAngle: .radians(-start.radians),
+            endAngle: .radians(-end.radians),
+            clockwise: !arc.isClockwise,
+            transform: .identity
+        )
     }
 }

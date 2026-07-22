@@ -74,6 +74,30 @@ public enum Constraint: Codable, Hashable, Sendable, Identifiable {
         }
     }
 
+    /// The constraint with its enablement changed.
+    ///
+    /// A disabled constraint keeps its record and its place in the document but
+    /// imposes nothing, which is how a user steps outside an invariant without
+    /// losing the relationship.
+    public func settingEnabled(_ enabled: Bool) -> Constraint {
+        switch self {
+        case .onGrid(var body): body.isEnabled = enabled; return .onGrid(body)
+        case .onKeyShape(var body): body.isEnabled = enabled; return .onKeyShape(body)
+        case .centered(var body): body.isEnabled = enabled; return .centered(body)
+        case .equalSpacing(var body): body.isEnabled = enabled; return .equalSpacing(body)
+        case .equalRadius(var body): body.isEnabled = enabled; return .equalRadius(body)
+        case .equalLength(var body): body.isEnabled = enabled; return .equalLength(body)
+        case .tangent(var body): body.isEnabled = enabled; return .tangent(body)
+        case .concentric(var body): body.isEnabled = enabled; return .concentric(body)
+        case .symmetric(var body): body.isEnabled = enabled; return .symmetric(body)
+        case .parallel(var body): body.isEnabled = enabled; return .parallel(body)
+        case .perpendicular(var body): body.isEnabled = enabled; return .perpendicular(body)
+        case .fixedAngle(var body): body.isEnabled = enabled; return .fixedAngle(body)
+        case .fixedDistance(var body): body.isEnabled = enabled; return .fixedDistance(body)
+        case .opticalOffset(var body): body.isEnabled = enabled; return .opticalOffset(body)
+        }
+    }
+
     private var body: any ConstraintBody {
         switch self {
         case .onGrid(let constraint): constraint

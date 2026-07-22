@@ -4,6 +4,7 @@
 
 import SwiftUI
 import GriddyGeometry
+import GriddyConstraints
 import GriddyDocument
 
 /// The drawing canvas. See spec 8.3.
@@ -97,6 +98,18 @@ struct SymbolCanvasView: View {
         document.grid.snapped(point)
     }
 
+    /// The freedom the whole selection retains, as the intersection of each
+    /// member's own restriction.
+    ///
+    /// Dragging a mixed selection can only move in directions every member is
+    /// free to move in, or the constrained ones would be dragged out of
+    /// compliance while the others kept up.
+    private func dragRestriction() -> DragRestriction {
+        editor.selection.reduce(DragRestriction.free) { result, id in
+            result.intersected(with: document.dragRestriction(for: id))
+        }
+    }
+
     private func beginDrag(at point: IconPoint) {
         gestureSnapshot = file.beginGesture()
 
@@ -128,11 +141,21 @@ struct SymbolCanvasView: View {
         if case .moving = drag {
             // Apply the delta since the last update, without touching the undo
             // stack; the whole gesture becomes one step when it ends.
-            let delta = IconVector(dx: point.x - drag.current.x,
+            var delta = IconVector(dx: point.x - drag.current.x,
                                    dy: point.y - drag.current.y)
+
+            // Constraints restrict the *input* of the edit rather than being
+            // checked afterwards, which is what makes them invariants: geometry
+            // simply cannot be dragged out of compliance. See spec 11.2.
+            delta = dragRestriction().apply(to: delta)
+
             if delta.length > .ulpOfOne {
                 file.updateWithoutUndo { document in
                     document.translatePrimitives(withIDs: editor.selection, by: delta)
+                    // Whatever depends on the moved geometry follows it. The
+                    // held primitives are pinned so the drag is not undone by
+                    // the constraints that rely on it.
+                    document.resolveConstraints(pinned: editor.selection)
                 }
             }
         }
