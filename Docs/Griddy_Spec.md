@@ -190,7 +190,7 @@ User sees previews:
 3. Blocking errors must be fixed or explicitly bypassed if safe.
 4. Griddy generates an SVG preserving required SF Symbols structure, with the three authored masters written into the template's three slots and reconciled so they interpolate (§14.5).
 5. User imports the SVG into Apple's SF Symbols app as the final authority.
-6. User assigns fill and erase layers there. That step belongs to the SF Symbols app and cannot be done in Griddy or carried in the SVG (§14.6).
+6. User assigns fill and erase layers there, following the reassignment checklist in Griddy's export report. That step belongs to the SF Symbols app and cannot be done in Griddy or carried in the SVG, and it must be redone after every re-import (§14.6).
 
 ## 8. UX Specification
 
@@ -1081,23 +1081,35 @@ Three consequences, and the third is the one that constrains the exporter.
 
 **Griddy cannot export layer semantics.** `SymbolRenderingRole` and `SymbolLayerRole.cutout` (§13.4) are internal modelling. They inform Griddy's own rendering and validation and are stored in the `.griddy` document, but they do not survive the SVG boundary. The specification should not imply otherwise.
 
-**The workflow past export is one-way.** A designer exports from Griddy, imports into SF Symbols, and assigns layers there. Nothing carries that assignment back. This is a property of the format, not a gap in Griddy.
+**Layer assignment does not survive a re-import.** Bringing a revised SVG into the SF Symbols app over an existing custom symbol resets the assignment; it is not merged or preserved. Every Griddy → SF Symbols round trip therefore costs the designer all their layer work, regardless of what Griddy exports.
 
-**Exported subpath order is therefore load-bearing, and must be stable.** The designer's layer assignment is keyed to subpath position within the exported path. If they assign "erase" to the fourth subpath, return to Griddy, make an unrelated edit, and re-export, the fourth subpath must still be the same piece of geometry — otherwise their assignment silently attaches to the wrong region, and nothing in either tool will report it.
+That is the dominant workflow fact about this boundary, and it has a product consequence: **crossing it is expensive, so Griddy's job is to make the designer confident before they cross.** Validation, small-size previews and interpolation checks (§6.5, §15) are not conveniences here — they are what keeps a designer from discovering a geometry problem only after redoing their layer assignments for the third time.
+
+**Exported subpath order should still be deterministic**, but for a weaker reason than protecting an assignment, which nothing can do. If ordering is stable across exports, reapplying layers after each round trip is mechanical: the fourth subpath is still the same region, so the designer repeats a known sequence rather than re-inspecting the geometry to work out which subpath is which. If ordering is incidental, every re-import becomes an investigation.
 
 This is not automatic. Two parts of the pipeline would otherwise produce incidental ordering:
 
 - Boolean stitching (§10.5) emits contours in whatever order the walk happens to find them, which depends on input order and on which segments matched first.
 - The compatibility pass (§12.6) inserts contours and pairs them across masters.
 
-Export must therefore impose a deterministic order rather than accepting the solver's:
+Export therefore imposes a deterministic order rather than accepting the solver's:
 
 1. Order by layer, following the document's layer order.
 2. Within a layer, order by a stable geometric key — bounding-box origin, then area — chosen so that a small edit to one contour does not reorder the others.
 3. Contours inserted by the compatibility pass go last, never interleaved.
-4. Report in the export report when the subpath count or order changes from the previous export of the same document, since that is precisely when a downstream layer assignment has been invalidated.
 
-Point 4 matters more than it looks. It is the only opportunity either tool has to tell the designer that work they did in the SF Symbols app has just been undermined.
+**The export report should carry a reassignment checklist.** Griddy knows which of its layers were meant to be cutouts (§13.4) and it controls the subpath ordering, so it can state what the designer needs to reapply:
+
+```text
+Layers to assign in SF Symbols
+  subpath 1-3   Outer Body      fill
+  subpath 4     Inner Counter   erase
+  subpath 5-7   Handle          fill
+```
+
+This is the constructive form of the limitation. The format cannot carry the intent, but the `.griddy` document is a durable record of it (§6.1), and the export report can hand it back as instructions. It also gives the ordering guarantee above something concrete to be true of: the checklist is only correct if the ordering rules hold.
+
+The report should note when subpath count or order differs from the previous export of the same document, since that tells the designer the checklist has changed rather than merely repeated.
 
 ## 15. Validation
 
@@ -1646,6 +1658,19 @@ Mitigation:
 - Resolve the §12.6 Open Question by real round-trip before Milestone 7 closes.
 - Treat Apple's SF Symbols app as the final compatibility authority.
 - Pin one template generation (§14.1) rather than guessing at compatibility across several.
+
+### Risk: The Export Boundary Is Expensive To Cross
+
+Fill and erase layer assignment happens in the SF Symbols app and is lost on every re-import (§14.6). A designer who exports, assigns layers, then finds a geometry problem pays for the fix twice: once in Griddy, and again redoing the assignment. Iterating across the boundary is costly in a way neither tool signals.
+
+This raises the stakes on everything that helps a designer be right *before* exporting, and it is the strongest argument in this specification for §6.5's continuous feedback.
+
+Mitigation:
+
+- Treat validation and small-size previews as the feature that protects the boundary, not as polish.
+- Make interpolation preview (§12.7) good enough that weight problems surface in Griddy rather than in the SF Symbols app.
+- Emit the reassignment checklist (§14.6) so the redo is mechanical rather than investigative.
+- Keep exported subpath ordering stable so the checklist stays valid between exports.
 
 ### Risk: Validation Cost
 
