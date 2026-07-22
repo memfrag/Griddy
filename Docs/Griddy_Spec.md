@@ -887,6 +887,8 @@ This falls out of reconciliation working on outline segments while export writes
 
 **Griddy's cheap check predicts the refusal only partly.** The count comparison caught the first rejection but passed the second. Continuous validation (§15.1) should compare sequences, which is no more expensive and is the property Apple actually tests.
 
+**A third export, with sequences aligned, imported successfully.** This is the first confirmation that Griddy's output is acceptable to the SF Symbols app at all, and it settles what "interpolatable" requires in practice: matching subpath counts, matching command counts, and matching command kinds at every index. Nothing further — start-point correspondence, contour direction, subpath ordering — needed separate attention, though the successful file may satisfy those incidentally rather than by construction. Treat the list as verified-sufficient for the cases exported so far, not as proven complete.
+
 #### Unreconcilable Masters Are Rejected Loudly
 
 Step 2 can fail. When a detail genuinely disappears at one weight there is no honest correspondence between the masters, and no amount of point insertion creates one. Griddy **rejects this outright**. It is an error, not a warning, and it is not bypassable: there is no "export anyway" for this case, because the resulting symbol would interpolate into visible garbage at the intermediate weights the designer never sees in Griddy.
