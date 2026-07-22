@@ -105,14 +105,79 @@ struct TemplateExportTests {
         }
         let bounds = try #require(PrimitiveGeometry.bounds(containing: points))
 
-        // The drawn circle is radius 5 about the cap-height centre, so the
-        // artwork must come back somewhere near there rather than at the
-        // origin or off in template coordinates.
+        // Vertically the artwork lands where it was drawn: the baseline is a
+        // font-wide metric and nothing shifts against it.
         let expected = system.capHeightBox.center
-        #expect(abs(bounds.center.x - expected.x) < 3,
-                "x centre \(bounds.center.x) is nowhere near \(expected.x)")
         #expect(abs(bounds.center.y - expected.y) < 3,
                 "y centre \(bounds.center.y) is nowhere near \(expected.y)")
+
+        // Horizontally it does *not*, and that is the point. Export normalises
+        // each master so its leftmost point sits at the standard left side
+        // bearing, because that is what fixes the glyph's origin. Asserting the
+        // drawn x here would be asserting the bug: bearings that vary per
+        // master make the symbol slide sideways as the weight changes.
+        let bearing = system.standardSideBearing
+        #expect(abs(bounds.minX - bearing) < 0.01,
+                "left bearing \(bounds.minX) should be \(bearing)")
+    }
+
+    @Test("Every master gets the same left side bearing")
+    func bearingsAgreeAcrossMasters() throws {
+        let package = try drawnDocument()
+        let (data, _) = try SFSymbolTemplateExporter.export(
+            document: package.document, sourceTemplate: package.sourceTemplate)
+        let reimported = try SFSymbolTemplateImporter.import(data)
+        let system = package.document.coordinateSystem
+
+        // Measured on a real Griddy export before this landed: 27.20, 25.99 and
+        // 23.45 template units where Apple's own symbols hold a constant 9.77.
+        // A bearing that shrinks as the weight grows is a symbol that drifts
+        // left as it gets bolder.
+        // Measured against each master's *own* glyph origin. The three masters
+        // sit in different columns of the sheet, so comparing absolute x would
+        // just measure the column pitch.
+        let guides = try SFSymbolTemplateExporter.marginGuides(in: data)
+        let unit = system.unitInTemplateSpace
+
+        var bearings: [Double] = []
+        for weight in SymbolWeight.authored {
+            let slot = SymbolSlot(weight: weight, scale: .small)
+            let variant = try #require(reimported.variants[slot])
+            let origin = try #require(guides[slot]).left
+            let xs = variant.commands.compactMap { command -> Double? in
+                switch command {
+                case .move(let to), .line(let to): to.x
+                case .cubic(_, _, let to): to.x
+                case .close: nil
+                }
+            }
+            bearings.append((try #require(xs.min()) - origin) / unit)
+        }
+
+        let spread = (bearings.max() ?? 0) - (bearings.min() ?? 0)
+        #expect(spread < 0.01, "bearings differ across masters: \(bearings)")
+    }
+
+    @Test("Advance width follows the artwork, not the source template")
+    func advanceFollowsArtwork() throws {
+        var package = try drawnDocument()
+        let (_, before) = try SFSymbolTemplateExporter.export(
+            document: package.document, sourceTemplate: package.sourceTemplate)
+
+        // Widen the drawing and the symbol must claim more room.
+        let centre = package.document.coordinateSystem.capHeightBox.center
+        package.document.addPrimitive(.circle(
+            CirclePrimitive(center: IconPoint(x: centre.x + 12, y: centre.y),
+                            radius: 3)))
+
+        let (_, after) = try SFSymbolTemplateExporter.export(
+            document: package.document, sourceTemplate: package.sourceTemplate)
+
+        let slot = SymbolSlot(weight: .regular, scale: .small)
+        let widened = try #require(after.advances[slot])
+        let original = try #require(before.advances[slot])
+        #expect(widened > original + 5,
+                "advance \(original) -> \(widened) barely moved")
     }
 
     @Test("Heavier masters export more area than lighter ones")
@@ -398,5 +463,78 @@ struct ExportReportTests {
 
         #expect(single.range == "subpath 4")
         #expect(span.range == "subpath 1-3")
+    }
+}
+
+/// Measures an export the way Apple's own templates were measured, so the two
+/// can be compared side by side.
+///
+/// Exists because the numbers that matter here -- side bearings and advance
+/// width -- are invisible on the canvas and invisible in the SVG without doing
+/// arithmetic. Set `GRIDDY_METRICS_OUT` to also write the file out.
+@Suite("Glyph metrics report")
+struct GlyphMetricsReportTests {
+
+    @Test("Exported metrics have the shape of Apple's own")
+    func reportMetrics() throws {
+        let package = try drawnDocument()
+        let (data, report) = try SFSymbolTemplateExporter.export(
+            document: package.document, sourceTemplate: package.sourceTemplate)
+
+        if let path = ProcessInfo.processInfo.environment["GRIDDY_METRICS_OUT"] {
+            try data.write(to: URL(fileURLWithPath: path))
+        }
+
+        let reimported = try SFSymbolTemplateImporter.import(data)
+        let guides = try SFSymbolTemplateExporter.marginGuides(in: data)
+        let standard = GlyphMetrics.standardSideBearingInTemplateUnits
+
+        print("")
+        print("  weight        advance       lsb       rsb   (template units)")
+
+        var bearings: [Double] = []
+        for weight in SymbolWeight.authored {
+            let slot = SymbolSlot(weight: weight, scale: .small)
+            let variant = try #require(reimported.variants[slot])
+            let guide = try #require(guides[slot])
+
+            let xs = variant.commands.compactMap { command -> Double? in
+                switch command {
+                case .move(let to), .line(let to): to.x
+                case .cubic(_, _, let to): to.x
+                case .close: nil
+                }
+            }
+            let low = try #require(xs.min())
+            let high = try #require(xs.max())
+            bearings.append(low - guide.left)
+
+            let line = "  " + weight.rawValue.padding(toLength: 12,
+                                                      withPad: " ",
+                                                      startingAt: 0)
+                + String(format: "%9.2f %9.2f %9.2f",
+                         guide.right - guide.left, low - guide.left,
+                         guide.right - high)
+            print(line)
+        }
+
+        print(String(format: "\n  Apple's standard side bearing: %.4f", standard))
+        print("")
+
+        // The left bearing is the one Apple holds exactly constant: 9.765625 in
+        // all nine masters across all three templates examined.
+        for bearing in bearings {
+            let drift = abs(bearing - standard)
+            #expect(drift < 0.01)
+        }
+
+        // And the advance must come from this drawing, not from the advance
+        // cup-and-bag happened to have.
+        let inherited = package.document.coordinateSystem
+            .templateMetrics.marginWidth
+        let unit = package.document.coordinateSystem.unitInTemplateSpace
+        let slot = SymbolSlot(weight: .regular, scale: .small)
+        let advance = try #require(report.advances[slot]) * unit
+        #expect(abs(advance - inherited) > 1)
     }
 }

@@ -31,7 +31,9 @@ struct SymbolCanvasView: View {
             let transform = makeTransform(for: size)
             var context = context
 
-            ConstructionLayerRenderer(document: document, transform: transform)
+            ConstructionLayerRenderer(document: document,
+                                      weight: editor.activeWeight,
+                                      transform: transform)
                 .draw(in: &context)
             ArtworkLayerRenderer(document: document,
                                  editor: editor,

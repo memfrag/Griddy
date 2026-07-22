@@ -22,10 +22,18 @@ import Foundation
 /// - ``capHeightBox`` is a *reference*, not a boundary. Artwork routinely
 ///   exceeds it — measured at 20.5 and 27.3 units tall in two real templates,
 ///   extending both below the baseline and above the capline.
-/// - ``marginBox`` is a *real bound*, horizontally. Apple's own artwork stays
-///   inside it in every template examined.
-/// - ``designArea`` is the drawing surface. Nothing in the template bounds
-///   artwork vertically, so this is a generous default rather than a rule.
+/// - ``marginBox`` spans the symbol's advance width: from the glyph origin to
+///   where the next glyph would start. It is *not* a bound on artwork. It is
+///   the horizontal room the symbol claims in a line of text, an output of the
+///   design rather than a constraint on it. See ``GlyphMetrics``.
+/// - ``designArea`` is the drawing surface, and is deliberately larger than
+///   both, in both directions.
+///
+/// **The design area used to be exactly the margin box wide**, which was wrong
+/// twice over. It made an advance width inherited from whichever template the
+/// document started from into a wall the artwork could not cross — so every new
+/// document was 26.6 units wide because that is how wide `custom.cup.and.bag`
+/// happened to be. Margins now sit *inside* the canvas, where a guide belongs.
 public struct CoordinateSystem: Codable, Hashable, Sendable {
 
     /// The number of units spanning baseline to capline. Fixed by the spec.
@@ -37,6 +45,26 @@ public struct CoordinateSystem: Codable, Hashable, Sendable {
     /// Eight units is half a cap height at each end, comfortably clearing the
     /// 6.4 below and 4.9 above measured in real templates.
     public static let designAreaOvershoot: Double = 8
+
+    /// How far the design area reaches to either side of the drawing width.
+    ///
+    /// Artwork may legitimately sit outside its own advance — a glyph can
+    /// overhang its side bearings — and the designer needs somewhere to put it
+    /// while deciding. Matches the vertical overshoot.
+    public static let designAreaSideOvershoot: Double = 8
+
+    /// The nominal drawing width, in units: two cap heights.
+    ///
+    /// A round number on purpose. The design area used to be the template's
+    /// advance width plus overshoot, which made a new document 42.6 units wide
+    /// — 26.63 of advance inherited from `custom.cup.and.bag`, plus 16. The
+    /// fraction meant nothing, and neither did the 26.63: it described how wide
+    /// a bag next to a cup happens to be.
+    ///
+    /// Two cap heights comfortably holds the widest advance measured in real
+    /// templates (28.5 units, `takeoutbag.and.cup.and.straw` at Black), and the
+    /// overshoot leaves room on either side of it.
+    public static let designAreaWidthInUnits: Double = 32
 
     /// Width used when a template carries no usable margin guides.
     public static let fallbackWidthInUnits: Double = 16
@@ -56,7 +84,11 @@ public struct CoordinateSystem: Codable, Hashable, Sendable {
 
     // MARK: Regions
 
-    /// The symbol's width, from left margin to right margin, in units.
+    /// The symbol's advance width, from left margin to right margin, in units.
+    ///
+    /// The template's value, which is the starting point for an imported
+    /// symbol. Export recomputes it from the artwork unless the document
+    /// overrides it.
     public var widthInUnits: Double {
         let unit = unitInTemplateSpace
         guard unit > .ulpOfOne else {
@@ -74,10 +106,10 @@ public struct CoordinateSystem: Codable, Hashable, Sendable {
         IconRect(x: 0, y: 0, width: widthInUnits, height: Self.unitsPerCapHeight)
     }
 
-    /// The horizontal bound on artwork, taken from the template's margins.
+    /// The symbol's advance: origin to next origin, spanning the design area
+    /// vertically because it says nothing about vertical extent.
     ///
-    /// This is the one extent the template genuinely constrains. It spans the
-    /// full design area vertically because the constraint is horizontal only.
+    /// A guide, not a bound. Artwork inside it is the usual case, not a rule.
     public var marginBox: IconRect {
         IconRect(x: 0,
                  y: designArea.minY,
@@ -85,11 +117,15 @@ public struct CoordinateSystem: Codable, Hashable, Sendable {
                  height: designArea.size.height)
     }
 
-    /// The drawing surface.
+    /// The drawing surface: a fixed 48 × 32 units, in whole units throughout.
+    ///
+    /// Independent of the template. The canvas is where you draw, not a
+    /// statement about how wide the symbol is — that is ``marginBox``, which is
+    /// computed from the artwork and drawn inside this.
     public var designArea: IconRect {
-        IconRect(x: 0,
+        IconRect(x: -Self.designAreaSideOvershoot,
                  y: -Self.designAreaOvershoot,
-                 width: widthInUnits,
+                 width: Self.designAreaWidthInUnits + Self.designAreaSideOvershoot * 2,
                  height: Self.unitsPerCapHeight + Self.designAreaOvershoot * 2)
     }
 

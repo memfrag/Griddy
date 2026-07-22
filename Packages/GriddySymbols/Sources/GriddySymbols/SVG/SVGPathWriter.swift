@@ -36,6 +36,12 @@ public enum SVGPathWriter {
         return pieces.joined(separator: " ")
     }
 
+    /// Formats a coordinate the same way path data does, for attributes written
+    /// outside a path -- margin guide positions, for instance.
+    public static func number(_ value: Double) -> String {
+        number(value, 4)
+    }
+
     /// Formats a coordinate without trailing zeros, so paths stay compact and
     /// compare cleanly between exports.
     private static func number(_ value: Double, _ precision: Int) -> String {

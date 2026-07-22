@@ -11,6 +11,11 @@ import GriddyDocument
 struct ConstructionLayerRenderer {
 
     let document: SymbolDocument
+
+    /// Which master the margins are drawn for. They are per-weight: a heavier
+    /// master is a wider glyph and claims more room.
+    let weight: SymbolWeight
+
     let transform: CanvasTransform
 
     /// The drawing surface: what the grid covers and the view fits to.
@@ -150,20 +155,35 @@ struct ConstructionLayerRenderer {
                        style: StrokeStyle(lineWidth: 1, dash: [6, 3]))
     }
 
-    /// The real horizontal bound on artwork, drawn as an actual edge.
+    /// The symbol's advance: glyph origin on the left, next glyph's origin on
+    /// the right.
+    ///
+    /// Not a bound on artwork — a glyph may overhang its own side bearings.
+    /// It is how much room the symbol claims in a line of text.
     ///
     /// This used to also stroke the cap-height box. Nothing was gained: the
     /// box's horizontal edges are the baseline and capline, already drawn above
     /// in blue, so the canvas carried two dashed strokes along the same two
-    /// lines; and its vertical edges sit on the design area's own edges, which
-    /// bound nothing. Six guide systems is already a lot to read without
-    /// drawing two of them twice.
+    /// lines; and its vertical edges sat on the design area's own edges, which
+    /// bound nothing.
     private func drawMargins(in context: inout GraphicsContext) {
-        let margins = document.coordinateSystem.marginBox
+        // Computed from this master's artwork, not copied from whatever the
+        // source template carried — so the guide moves as the drawing does,
+        // which is the whole point of an advance width. See spec 9.3.
+        let resolved = ResolvedMargins.resolve(
+            outline: document.resolvedOutline(weight: weight),
+            weight: weight,
+            margins: document.margins,
+            coordinateSystem: document.coordinateSystem)
+
+        // Placed against the artwork where it actually sits on the canvas.
+        // Export normalises the drawing onto the glyph origin; drawing these at
+        // 0 and `advance` would put them somewhere the artwork isn't.
+        let designArea = self.designArea
         var edges = Path()
-        for x in [margins.minX, margins.maxX] {
-            edges.move(to: transform.point(IconPoint(x: x, y: margins.minY)))
-            edges.addLine(to: transform.point(IconPoint(x: x, y: margins.maxY)))
+        for x in [resolved.originX, resolved.originX + resolved.advance] {
+            edges.move(to: transform.point(IconPoint(x: x, y: designArea.minY)))
+            edges.addLine(to: transform.point(IconPoint(x: x, y: designArea.maxY)))
         }
         context.stroke(edges, with: .color(.marginEdge), lineWidth: 1)
     }

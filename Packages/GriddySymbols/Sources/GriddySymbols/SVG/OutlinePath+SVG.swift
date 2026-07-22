@@ -17,8 +17,12 @@ extension Array where Element == OutlinePath {
     ///
     /// The caller must have run ``OutlineCompatibility/reconcile(_:)`` first;
     /// this assumes the structures already match.
+    /// - Parameter transform: maps a point for a given master index. Per-master
+    ///   rather than shared because each master sits at its own glyph origin:
+    ///   normalising every master to the same left side bearing is what stops
+    ///   the symbol sliding sideways as the weight changes. See ``GlyphMetrics``.
     public func svgCommandsForReconciledMasters(
-        mapping transform: (IconPoint) -> IconPoint
+        mapping transform: (Int, IconPoint) -> IconPoint
     ) -> [[SVGPathCommand]] {
         guard let reference = first else {
             return []
@@ -35,7 +39,7 @@ extension Array where Element == OutlinePath {
                     .segments.first?.start else {
                     continue
                 }
-                result[master].append(.move(to: transform(start)))
+                result[master].append(.move(to: transform(master, start)))
             }
 
             let segmentCount = reference.contours[contourIndex].segments.count
@@ -70,14 +74,15 @@ extension Array where Element == OutlinePath {
                         // cubic with its controls a third and two thirds along.
                         result[master].append(contentsOf: pieceCommands(
                             from: from, to: to, pieces: pieces,
-                            asCurve: anyMasterCurves, transform: transform))
+                            asCurve: anyMasterCurves,
+                            transform: { transform(master, $0) }))
 
                     case .arc(let arc):
                         for cubic in ArcToCubic.cubics(for: arc, count: pieces) {
                             result[master].append(.cubic(
-                                control1: transform(cubic.control1),
-                                control2: transform(cubic.control2),
-                                to: transform(cubic.end)))
+                                control1: transform(master, cubic.control1),
+                                control2: transform(master, cubic.control2),
+                                to: transform(master, cubic.end)))
                         }
                     }
                 }

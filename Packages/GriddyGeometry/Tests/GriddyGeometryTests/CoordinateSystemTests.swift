@@ -65,8 +65,20 @@ struct CoordinateSystemDerivationTests {
         #expect(system.designArea.minY == -8)
         #expect(system.designArea.maxY == 24)
         #expect(system.designArea.size.height == 32)
-        #expect(system.designArea.size.width == system.capHeightBox.size.width,
-                "the design area is bounded horizontally by the margins")
+        // Horizontally too. The margin box is the symbol's advance width -- how
+        // much room it claims in a line of text -- not a wall the artwork has
+        // to stay inside. Making the canvas exactly that wide meant every new
+        // document inherited the advance of whatever symbol its template came
+        // from, and left nowhere to draw an overhang.
+        #expect(system.designArea.minX == -8)
+        #expect(system.designArea.maxX == 40)
+        #expect(system.designArea.size.width == 48)
+
+        // Whole units, and the same for every document. The width used to be
+        // the template's advance plus overshoot, which made a new document
+        // 42.6 units wide -- a fraction that described nothing but how wide
+        // custom.cup.and.bag happened to be.
+        #expect(system.designArea.size.width.truncatingRemainder(dividingBy: 1) == 0)
     }
 
     @Test("A template with no usable margins falls back rather than collapsing")

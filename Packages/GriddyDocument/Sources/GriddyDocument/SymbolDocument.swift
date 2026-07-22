@@ -22,6 +22,10 @@ public struct SymbolDocument: Codable, Hashable, Sendable, Identifiable {
     public var primitives: [IconPrimitive]
     public var constraints: [Constraint]
     public var masters: [SymbolMaster]
+
+    /// Per-weight horizontal metrics. Empty means every weight is computed
+    /// from its own artwork on export. See ``SymbolMargins``.
+    public var margins: SymbolMargins
     public var previewSettings: PreviewSettings
     public var exportSettings: ExportSettings
     public var validationState: ValidationState
@@ -35,6 +39,7 @@ public struct SymbolDocument: Codable, Hashable, Sendable, Identifiable {
                 primitives: [IconPrimitive] = [],
                 constraints: [Constraint] = [],
                 masters: [SymbolMaster] = SymbolMaster.authoredDefaults,
+                margins: SymbolMargins = SymbolMargins(),
                 previewSettings: PreviewSettings = .default,
                 exportSettings: ExportSettings = .default,
                 validationState: ValidationState = .empty) {
@@ -47,9 +52,48 @@ public struct SymbolDocument: Codable, Hashable, Sendable, Identifiable {
         self.primitives = primitives
         self.constraints = constraints
         self.masters = masters
+        self.margins = margins
         self.previewSettings = previewSettings
         self.exportSettings = exportSettings
         self.validationState = validationState
+    }
+
+    // MARK: Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case id, metadata, coordinateSystem, grid, keyShapes, layers
+        case primitives, constraints, masters, margins
+        case previewSettings, exportSettings, validationState
+    }
+
+    /// Decodes documents written before margins were document state.
+    ///
+    /// Those carry no `margins` key and take the automatic default, which
+    /// recomputes every weight from its artwork -- the behaviour they should
+    /// have had. Spelled out rather than synthesised only so this one key can
+    /// be optional; every other field is still required.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decode(UUID.self, forKey: .id)
+        metadata = try container.decode(SymbolMetadata.self, forKey: .metadata)
+        coordinateSystem = try container.decode(
+            CoordinateSystem.self, forKey: .coordinateSystem)
+        grid = try container.decode(GridDefinition.self, forKey: .grid)
+        keyShapes = try container.decode(KeyShapeSet.self, forKey: .keyShapes)
+        layers = try container.decode([SymbolLayer].self, forKey: .layers)
+        primitives = try container.decode([IconPrimitive].self, forKey: .primitives)
+        constraints = try container.decode([Constraint].self, forKey: .constraints)
+        masters = try container.decode([SymbolMaster].self, forKey: .masters)
+        previewSettings = try container.decode(
+            PreviewSettings.self, forKey: .previewSettings)
+        exportSettings = try container.decode(
+            ExportSettings.self, forKey: .exportSettings)
+        validationState = try container.decode(
+            ValidationState.self, forKey: .validationState)
+
+        margins = try container.decodeIfPresent(
+            SymbolMargins.self, forKey: .margins) ?? SymbolMargins()
     }
 
     // MARK: Creating
