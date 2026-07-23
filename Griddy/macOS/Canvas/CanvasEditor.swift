@@ -55,12 +55,17 @@ enum DragOperation {
     /// Moving the current selection.
     case moving(start: IconPoint, current: IconPoint)
 
+    /// Reshaping one primitive by dragging a single handle.
+    case reshaping(primitiveID: PrimitiveID, handle: PrimitiveHandle,
+                   start: IconPoint, current: IconPoint)
+
     /// Rubber-band selecting.
     case marquee(start: IconPoint, current: IconPoint)
 
     var start: IconPoint {
         switch self {
-        case .creating(_, let start, _), .moving(let start, _), .marquee(let start, _):
+        case .creating(_, let start, _), .moving(let start, _),
+             .reshaping(_, _, let start, _), .marquee(let start, _):
             start
         }
     }
@@ -68,7 +73,7 @@ enum DragOperation {
     var current: IconPoint {
         switch self {
         case .creating(_, _, let current), .moving(_, let current),
-             .marquee(_, let current):
+             .reshaping(_, _, _, let current), .marquee(_, let current):
             current
         }
     }
@@ -93,6 +98,8 @@ enum DragOperation {
             .creating(tool: tool, start: start, current: point)
         case .moving(let start, _):
             .moving(start: start, current: point)
+        case .reshaping(let id, let handle, let start, _):
+            .reshaping(primitiveID: id, handle: handle, start: start, current: point)
         case .marquee(let start, _):
             .marquee(start: start, current: point)
         }

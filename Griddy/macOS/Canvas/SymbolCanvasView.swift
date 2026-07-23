@@ -80,6 +80,17 @@ struct SymbolCanvasView: View {
         return CanvasEditor.hitToleranceInPoints / scale
     }
 
+    /// A slightly tighter grab radius for handles than for shape bodies, so a
+    /// click just inside a shape's edge moves it rather than snapping to a
+    /// handle it was not quite on.
+    private var handleTolerance: Double {
+        let scale = transform.scale
+        guard scale > .ulpOfOne else {
+            return 0.2
+        }
+        return CanvasEditor.hitToleranceInPoints / scale
+    }
+
     // MARK: Gesture
 
     private var dragGesture: some Gesture {
@@ -120,6 +131,17 @@ struct SymbolCanvasView: View {
             return
         }
 
+        // A handle of the current selection wins over hitting a shape body, so
+        // grabbing the edge of a selected circle resizes it rather than
+        // starting a move. Handles are only live for a single selection —
+        // reshaping several primitives at once has no obvious meaning.
+        if let grabbed = handleUnderCursor(at: point) {
+            editor.drag = .reshaping(primitiveID: grabbed.id,
+                                     handle: grabbed.handle,
+                                     start: point, current: point)
+            return
+        }
+
         // Roots only, and compound-aware: hit testing the flat list would find
         // a compound's children, which are still in the document but no longer
         // drawn, so clicking a combined shape would select an invisible operand.
@@ -136,8 +158,46 @@ struct SymbolCanvasView: View {
         }
     }
 
+    /// The handle of the single selected primitive nearest the cursor, if one
+    /// is within grabbing distance.
+    private func handleUnderCursor(at point: IconPoint)
+    -> (id: PrimitiveID, handle: PrimitiveHandle)? {
+        guard editor.selection.count == 1,
+              let id = editor.selection.first,
+              let primitive = document.primitive(withID: id),
+              document.isEditable(id) else {
+            return nil
+        }
+
+        let nearest = primitive.handles.min {
+            $0.position.distance(to: point) < $1.position.distance(to: point)
+        }
+        guard let nearest,
+              nearest.position.distance(to: point) <= handleTolerance else {
+            return nil
+        }
+        return (id, nearest.handle)
+    }
+
     private func updateDrag(to point: IconPoint) {
         guard let drag = editor.drag else {
+            return
+        }
+
+        if case .reshaping(let id, let handle, _, _) = drag {
+            // Reshaping writes the primitive directly to the snapped pointer, so
+            // there is no delta to accumulate: the handle simply follows the
+            // cursor. Off the undo stack until the gesture ends.
+            file.updateWithoutUndo { document in
+                guard let primitive = document.primitive(withID: id) else {
+                    return
+                }
+                document.replacePrimitive(primitive.moving(handle, to: point))
+                // A constrained sibling follows the reshaped primitive, which is
+                // pinned so the drag is not undone by what depends on it.
+                document.resolveConstraints(pinned: [id])
+            }
+            editor.drag = drag.withCurrent(point)
             return
         }
 
@@ -197,6 +257,11 @@ struct SymbolCanvasView: View {
                                from: snapshot,
                                undoManager: undoManager)
 
+        case .reshaping(let id, let handle, _, _):
+            file.commitGesture(reshapeActionName(for: id, handle: handle),
+                               from: snapshot,
+                               undoManager: undoManager)
+
         case .marquee:
             let picked = document.rootPrimitives(intersecting: drag.rect)
             editor.selection = Set(picked.map(\.id))
@@ -210,5 +275,22 @@ struct SymbolCanvasView: View {
             return "Move \(editor.selection.count) Primitives"
         }
         return "Move \(primitive.kindName)"
+    }
+
+    /// A semantic name for a reshape, so the undo menu reads "Resize Circle"
+    /// rather than a bare "Reshape".
+    private func reshapeActionName(for id: PrimitiveID,
+                                   handle: PrimitiveHandle) -> String {
+        let kind = document.primitive(withID: id)?.kindName ?? "Primitive"
+        let verb: String
+        switch handle {
+        case .radius, .arcRadius, .corner:
+            verb = "Resize"
+        case .lineStart, .lineEnd, .arcStart, .arcEnd, .vertex:
+            verb = "Edit"
+        case .cornerRadius:
+            verb = "Round"
+        }
+        return "\(verb) \(kind)"
     }
 }

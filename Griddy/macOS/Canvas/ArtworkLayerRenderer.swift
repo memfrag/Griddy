@@ -136,39 +136,32 @@ struct ArtworkLayerRenderer {
     /// shows its endpoints. Milestone 4 makes them draggable.
     private func drawHandles(for primitive: IconPrimitive,
                              in context: inout GraphicsContext) {
-        for point in handlePoints(for: primitive) {
-            let center = transform.point(point)
+        // The same semantic handles the gesture layer drags, so what is drawn
+        // and what is grabbable can never drift apart. A corner-radius handle
+        // is drawn round to read differently from the square resize handles.
+        for handle in primitive.handles {
+            let center = transform.point(handle.position)
             let size: CGFloat = 5
             let rect = CGRect(x: center.x - size / 2,
                               y: center.y - size / 2,
                               width: size,
                               height: size)
-            context.fill(Path(rect), with: .color(.handleFill))
-            context.stroke(Path(rect), with: .color(.selection), lineWidth: 1)
+            let shape = handle.handle == .cornerRadius
+                ? Path(ellipseIn: rect) : Path(rect)
+            context.fill(shape, with: .color(.handleFill))
+            context.stroke(shape, with: .color(.selection), lineWidth: 1)
         }
-    }
 
-    private func handlePoints(for primitive: IconPrimitive) -> [IconPoint] {
-        switch primitive {
-        case .line(let line):
-            [line.start, line.end]
-        case .circle(let circle):
-            [circle.center,
-             IconPoint(x: circle.center.x + circle.radius, y: circle.center.y)]
-        case .arc(let arc):
-            [arc.center, arc.startPoint, arc.endPoint]
-        case .roundedRect(let rect):
-            corners(of: rect.bounds)
-        case .capsule(let capsule):
-            corners(of: capsule.bounds)
-        case .polyline(let polyline):
-            polyline.points
-        case .symmetricPath(let path):
-            path.points
-        case .compound, .importedPath:
-            // Via the document, which is the only thing that can follow a
-            // compound's child identifiers to find its extent.
-            document.bounds(of: primitive).map(corners) ?? []
+        // Compounds and imported paths have no reshape handles, but their
+        // extent is still worth marking while selected.
+        if primitive.handles.isEmpty,
+           let bounds = document.bounds(of: primitive) {
+            for point in corners(of: bounds) {
+                let center = transform.point(point)
+                let rect = CGRect(x: center.x - 2.5, y: center.y - 2.5,
+                                  width: 5, height: 5)
+                context.stroke(Path(rect), with: .color(.selection), lineWidth: 1)
+            }
         }
     }
 
