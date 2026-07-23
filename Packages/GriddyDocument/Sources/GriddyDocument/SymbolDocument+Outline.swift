@@ -56,8 +56,13 @@ extension SymbolDocument {
         }
 
         guard case .compound(let compound) = primitive else {
-            return Outliner.outline(primitive, width: strokeWidth(for: primitive,
-                                                                  weight: weight))
+            // Apply this weight's geometry deviation before outlining, so a
+            // per-master move or resize is reflected in the exported shape and
+            // interpolates through the derived weights. Stroke width is resolved
+            // from the original primitive's attributes, not the adjusted copy.
+            let shaped = adjusted(primitive, weight: weight)
+            return Outliner.outline(shaped,
+                                    width: strokeWidth(for: primitive, weight: weight))
         }
 
         var visiting = visiting

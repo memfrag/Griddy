@@ -27,6 +27,13 @@ struct PrimitiveInspector: View {
 
             ConstraintSection(file: file, editor: editor, primitive: primitive)
 
+            // Only for a real primitive, not a compound: a compound's shape is
+            // its children's, which carry their own adjustments.
+            if !isCompound {
+                MasterAdjustmentSection(file: file, editor: editor,
+                                        primitive: primitive)
+            }
+
             Section("Stroke") {
                 LabeledContent("Width") {
                     Text(format(file.document.strokeWidth(for: primitive,
@@ -52,6 +59,10 @@ struct PrimitiveInspector: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private var isCompound: Bool {
+        if case .compound = primitive { true } else { false }
     }
 
     // MARK: Geometry fields

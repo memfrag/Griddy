@@ -25,6 +25,10 @@ struct DocumentInspector: View {
             PrimitiveInspector(file: file, editor: editor, primitive: primitive)
         } else if editor.selection.count > 1 {
             multipleSelection
+        } else if case .master = selection {
+            // Selecting a master in the sidebar shows the whole interpolated
+            // family, which is where the derived weights become visible.
+            InterpolationPreview(document: document)
         } else {
             documentProperties
         }

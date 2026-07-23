@@ -884,6 +884,14 @@ Warnings are raised when a per-master adjustment changes the *visual* structure 
 
 Note the distinction from path topology. Coherent *construction* is about the primitive graph and is enforced during editing. Compatible *path structure* is a property of the exported outlines and is produced at export time by §12.6. The first does not imply the second: two masters built from the same primitives can still resolve to different numbers of contours once booleans run.
 
+**How adjustments resolve.** A `MasterAdjustment` stores a primitive's deviation in one master: a position offset, a radius delta, a corner-radius delta, and a stroke-width delta. The base primitive is the canonical shape shared across every master, and each authored master holds only its deltas — Regular included, so a document where Regular deviates from the base is expressible.
+
+Outline resolution applies the geometry deltas to the primitive before outlining, and resolves the stroke width from the primitive's own attributes (§10.3). The two are separate because stroke is the *input* to outlining, not a change to the shape being outlined.
+
+A **derived weight** — one of the six Griddy does not author — has no master, so its adjustment is interpolated: piecewise linear between the two authored masters that bracket it, on the same axis the stroke expansion uses. The three authored anchors stay exact; the gaps are filled. This is what lets an intermediate weight move and grow smoothly rather than snapping between anchors, and it is surfaced in the **Interpolation** view (select a master in the sidebar), which is the only place the six derived weights are rendered.
+
+The adjustment UI lives on the primitive inspector and targets the toolbar's active master. Only authored weights are selectable there, so a derived weight is never adjusted directly — attempting to set an adjustment on one is a no-op, because there is no master to store it in.
+
 ### 12.6 Outline Compatibility Pass
 
 Export must hand the SF Symbols app three masters that interpolate. After each master is outlined and boolean-resolved independently, they are normalised to a shared structure:

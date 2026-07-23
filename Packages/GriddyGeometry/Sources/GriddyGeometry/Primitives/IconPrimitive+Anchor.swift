@@ -113,6 +113,26 @@ extension IconPrimitive {
         return .line(line)
     }
 
+    /// The corner radius of a primitive that has an adjustable one.
+    ///
+    /// Only a rounded rectangle qualifies. A capsule's corner is a function of
+    /// its bounds, and a circle is all corner, so neither exposes one to set.
+    public var cornerRadius: Double? {
+        guard case .roundedRect(let rect) = self else {
+            return nil
+        }
+        return rect.cornerRadius
+    }
+
+    /// The primitive with its corner radius changed, where that is meaningful.
+    public func settingCornerRadius(_ newRadius: Double) -> IconPrimitive {
+        guard case .roundedRect(var rect) = self else {
+            return self
+        }
+        rect.cornerRadius = max(0, newRadius)
+        return .roundedRect(rect)
+    }
+
     /// The primitive reflected across an axis.
     public func mirrored(across axis: SymmetryAxis, at position: Double) -> IconPrimitive {
         guard let anchor else {
