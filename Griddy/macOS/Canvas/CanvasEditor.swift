@@ -14,6 +14,11 @@ import GriddyDocument
 final class CanvasEditor {
 
     var tool: Tool = .select
+
+    /// The drawing tool space interrupted, so it can be restored on release in
+    /// momentary mode. Nil when space is not holding Select. See
+    /// ``SpaceToolBehavior``.
+    var toolBeforeSpace: Tool?
     var selection: Set<PrimitiveID> = []
     var activeWeight: SymbolWeight = .regular
 

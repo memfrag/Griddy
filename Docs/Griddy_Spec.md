@@ -273,6 +273,10 @@ The canvas has three conceptual layers:
 
 **System-symbol comparison.** Comparison is against real system SF Symbols obtained through `NSImage(systemSymbolName:accessibilityDescription:)` configured to the active weight, scale, and point size. Griddy does not reference or read other `.griddy` documents (§13.1). System symbols are both easier to obtain and the more useful reference, since they define the visual weight a custom symbol must sit alongside.
 
+**Selection handles are draggable.** A selected primitive shows semantic handles — a circle its radius, a line its ends, a rectangle its corners and corner radius, an arc its angles and radius, a polyline its vertices. Dragging one reshapes through that role rather than moving the whole primitive, snapping to the grid and resolving constraints like any other edit. Compounds and imported paths have no parametric form and so expose no reshape handles; they can still be moved as a whole.
+
+**The space bar switches to Select while drawing.** A quick way to select or nudge a shape without leaving the drawing tool. The behaviour is a preference (Canvas settings): *momentary* — hold to select, release to return to the drawing tool, the Figma/Sketch convention — or *toggle* — tap once to switch and stay. It acts only when a drawing tool is active and never interrupts a drag.
+
 ### 8.4 No Modes
 
 Griddy has no editing modes and no global mode state.

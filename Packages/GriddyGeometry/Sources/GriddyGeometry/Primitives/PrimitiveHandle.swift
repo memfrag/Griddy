@@ -9,7 +9,7 @@ import Foundation
 /// Handles are *semantic*: a circle's is its radius, a line's are its ends, a
 /// rounded rectangle's are its corners and its corner radius. Modelling the
 /// role rather than just the point is what lets one drag mean "resize" on one
-/// primitive and "move this vertex" on another. See spec 8.2.
+/// primitive and "move this vertex" on another. See spec 8.3.
 public enum PrimitiveHandle: Hashable, Sendable {
 
     /// The extent of a circle, dragged to change its radius.

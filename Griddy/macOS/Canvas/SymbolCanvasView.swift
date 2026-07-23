@@ -13,10 +13,16 @@ struct SymbolCanvasView: View {
     @ObservedObject var file: SymbolDocumentFile
     @Bindable var editor: CanvasEditor
     @Environment(\.undoManager) private var undoManager
+    @Environment(AppSettings.self) private var settings
 
     /// Document state captured when the current gesture began, so the whole
     /// gesture collapses into one undo step. See spec 16.4.
     @State private var gestureSnapshot: SymbolDocument?
+
+    /// Whether the canvas holds keyboard focus, which `.onKeyPress` requires.
+    /// A Canvas with a drag gesture does not reliably take focus on click, so
+    /// it is claimed explicitly on appearance and on the first drag.
+    @FocusState private var isFocused: Bool
 
     private var document: SymbolDocument {
         file.document
@@ -44,8 +50,52 @@ struct SymbolCanvasView: View {
         .contentShape(Rectangle())
         .gesture(dragGesture)
         .background(PaneBackground())
+        // Focusable so the canvas receives key events. Space temporarily or
+        // permanently switches to Select while drawing; see spec 8.3.
+        .focusable()
+        .focusEffectDisabled()
+        .focused($isFocused)
+        .onKeyPress(.space, phases: [.down, .up], action: handleSpace)
+        .onAppear { isFocused = true }
         .onChange(of: document.primitives.count) {
             editor.pruneSelection(against: document)
+        }
+    }
+
+    /// Switches to the Select tool on space, per the user's preference.
+    ///
+    /// Momentary: hold to select, release to return to the drawing tool.
+    /// Toggle: tap to switch and stay. Either way it does nothing unless a
+    /// drawing tool is active, and never interrupts a drag in progress.
+    private func handleSpace(_ press: KeyPress) -> KeyPress.Result {
+        switch press.phase {
+        case .down:
+            // A key repeat re-fires `.down`; act only on the first press so a
+            // held space in momentary mode does not keep re-saving Select as
+            // the tool to restore.
+            guard editor.toolBeforeSpace == nil,
+                  editor.tool.isDrawingTool,
+                  editor.drag == nil else {
+                return .ignored
+            }
+            editor.toolBeforeSpace = editor.tool
+            editor.tool = .select
+            return .handled
+
+        case .up:
+            guard let previous = editor.toolBeforeSpace else {
+                return .ignored
+            }
+            // Momentary restores the drawing tool; toggle keeps Select. The
+            // saved tool is cleared either way so the next press starts fresh.
+            if settings.spaceToolBehavior == .momentary {
+                editor.tool = previous
+            }
+            editor.toolBeforeSpace = nil
+            return .handled
+
+        default:
+            return .ignored
         }
     }
 
@@ -124,6 +174,9 @@ struct SymbolCanvasView: View {
     }
 
     private func beginDrag(at point: IconPoint) {
+        // Interacting with the canvas takes keyboard focus back from the
+        // sidebar or inspector, so space works after a click here.
+        isFocused = true
         gestureSnapshot = file.beginGesture()
 
         if editor.tool.isDrawingTool {

@@ -22,7 +22,10 @@ import KeyValueStore
     public enum Key: String {
         /// The preferred color scheme for the app.
         case colorScheme
-        
+
+        /// What the space bar does while a drawing tool is active.
+        case spaceToolBehavior
+
         // <-- (1 / 3) Add key for new property here
     }
 
@@ -34,7 +37,15 @@ import KeyValueStore
             store.save(colorScheme, for: .colorScheme)
         }
     }
-    
+
+    /// What the space bar does while a drawing tool is active. See
+    /// ``SpaceToolBehavior``.
+    public var spaceToolBehavior: SpaceToolBehavior {
+        didSet {
+            store.save(spaceToolBehavior, for: .spaceToolBehavior)
+        }
+    }
+
     // <-- (2 / 3) Add property for new property here
 
     // MARK: Setup
@@ -51,7 +62,8 @@ import KeyValueStore
     public init(store: AnyKeyValueStore<AppSettings.Key>? = nil) {
         self.store = store ?? .defaultStore
         colorScheme = self.store.load(.colorScheme, default: .system)
-        
+        spaceToolBehavior = self.store.load(.spaceToolBehavior, default: .momentary)
+
         // <-- (3 / 3) Add initializer for new property here.
     }
 }
