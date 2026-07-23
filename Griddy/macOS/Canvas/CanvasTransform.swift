@@ -41,6 +41,41 @@ struct CanvasTransform {
         )
     }
 
+    /// A transform with an explicit scale and origin, for callers that place
+    /// the canvas themselves rather than fitting it to a view.
+    init(scale: Double, origin: CGPoint) {
+        self.scale = scale
+        self.origin = origin
+    }
+
+    /// A transform that renders a symbol at a text point size.
+    ///
+    /// SF Symbols are glyphs (§9.5), so a point-size preview means exactly what
+    /// it means for text: the cap height occupies a fixed fraction of the point
+    /// size. Everything else — advance, overshoot, descenders — scales with it.
+    ///
+    /// The artwork is centred in a `boxSize`-square cell. It may overflow, and
+    /// that is honest: a symbol too heavy to read at 12 pt should look crowded
+    /// at 12 pt.
+    static func preview(pointSize: Double,
+                        boxSize: CGFloat,
+                        artworkBounds: IconRect,
+                        capHeightFraction: Double = 0.7) -> CanvasTransform {
+        // Points per unit: cap height (16 u) maps to a fraction of the point
+        // size, the way a font sets a glyph.
+        let scale = capHeightFraction * pointSize
+            / CoordinateSystem.unitsPerCapHeight
+
+        // Centre the artwork's own bounds in the cell.
+        let drawnWidth = artworkBounds.size.width * scale
+        let drawnHeight = artworkBounds.size.height * scale
+        let originX = (boxSize - drawnWidth) / 2 - artworkBounds.minX * scale
+        let originY = (boxSize + drawnHeight) / 2 + artworkBounds.minY * scale
+
+        return CanvasTransform(scale: scale,
+                               origin: CGPoint(x: originX, y: originY))
+    }
+
     func point(_ point: IconPoint) -> CGPoint {
         CGPoint(x: origin.x + point.x * scale,
                 y: origin.y - point.y * scale)

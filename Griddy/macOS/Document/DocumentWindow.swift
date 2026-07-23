@@ -67,7 +67,8 @@ private struct DocumentWindowContent: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 Divider()
                 BottomStrip(document: file.document,
-                            state: validator.state) { ids in
+                            state: validator.state,
+                            weight: editor.activeWeight) { ids in
                     editor.selection = ids.filter(file.document.isEditable)
                 }
             }

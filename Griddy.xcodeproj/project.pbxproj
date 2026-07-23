@@ -16,6 +16,11 @@
 		666C0F2DEC43DF392AEC7F95 /* SensibleStyling in Frameworks */ = {isa = PBXBuildFile; productRef = 784145F3E95BDA1896DF5068 /* SensibleStyling */; };
 		6823A90DB8EA1F82AB1C9670 /* SettingsUI in Frameworks */ = {isa = PBXBuildFile; productRef = F9D43E9464806C8FD7162D0B /* SettingsUI */; };
 		6A8D2C75D79F639366CD8216 /* MathKit in Frameworks */ = {isa = PBXBuildFile; productRef = 5D4A7FC61AE42FDB69BCB2C3 /* MathKit */; };
+		6DA1000000000000000001AA /* GriddyGeometry in Frameworks */ = {isa = PBXBuildFile; productRef = 6DA1000000000000000002AA /* GriddyGeometry */; };
+		6DA1000000000000000001BB /* GriddyConstraints in Frameworks */ = {isa = PBXBuildFile; productRef = 6DA1000000000000000002BB /* GriddyConstraints */; };
+		6DA1000000000000000001CC /* GriddyDocument in Frameworks */ = {isa = PBXBuildFile; productRef = 6DA1000000000000000002CC /* GriddyDocument */; };
+		6DA1000000000000000001DD /* GriddySymbols in Frameworks */ = {isa = PBXBuildFile; productRef = 6DA1000000000000000002DD /* GriddySymbols */; };
+		6DA1000000000000000001EE /* GriddyValidation in Frameworks */ = {isa = PBXBuildFile; productRef = 6DA1000000000000000002EE /* GriddyValidation */; };
 		7B8C3B8F256142FF399A9C36 /* SystemKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3371F8078F5618E8F6D26E8D /* SystemKit */; };
 		7F4B17BB165832C0F9D29FE1 /* SwiftUIToolbox in Frameworks */ = {isa = PBXBuildFile; productRef = 0A2BBBFE04F59F1FA891CD54 /* SwiftUIToolbox */; };
 		862F768EFC21BCD39C5BFCAA /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = BF12F2CC97B0FE7E820D7A45 /* Sparkle */; };
@@ -28,28 +33,22 @@
 		CED21CBE24978C6C8D7B41DE /* Constructs in Frameworks */ = {isa = PBXBuildFile; productRef = FA65D964696348B2D10D5245 /* Constructs */; };
 		F4BE8BFA73C8C9E9476CDC11 /* CGMath in Frameworks */ = {isa = PBXBuildFile; productRef = 3CE8FB12BA3F21470690C5E0 /* CGMath */; };
 		F9E538649CD2EE38ACAC7BDA /* AppRouting in Frameworks */ = {isa = PBXBuildFile; productRef = CE4242269FB886B0D13CDC14 /* AppRouting */; };
-		6DA1000000000000000001AA /* GriddyGeometry in Frameworks */ = {isa = PBXBuildFile; productRef = 6DA1000000000000000002AA /* GriddyGeometry */; };
-		6DA1000000000000000001BB /* GriddyConstraints in Frameworks */ = {isa = PBXBuildFile; productRef = 6DA1000000000000000002BB /* GriddyConstraints */; };
-		6DA1000000000000000001CC /* GriddyDocument in Frameworks */ = {isa = PBXBuildFile; productRef = 6DA1000000000000000002CC /* GriddyDocument */; };
-		6DA1000000000000000001DD /* GriddySymbols in Frameworks */ = {isa = PBXBuildFile; productRef = 6DA1000000000000000002DD /* GriddySymbols */; };
-		6DA1000000000000000001EE /* GriddyValidation in Frameworks */ = {isa = PBXBuildFile; productRef = 6DA1000000000000000002EE /* GriddyValidation */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		B8DF9ADE3D7DEADB833DD957 /* Griddy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Griddy.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		FEB4625E57EF19464E135A0C /* AppDesign */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AppDesign; path = Packages/AppDesign; sourceTree = SOURCE_ROOT; };
 		6DA1000000000000000003AA /* GriddyGeometry */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GriddyGeometry; path = Packages/GriddyGeometry; sourceTree = SOURCE_ROOT; };
 		6DA1000000000000000003BB /* GriddyConstraints */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GriddyConstraints; path = Packages/GriddyConstraints; sourceTree = SOURCE_ROOT; };
 		6DA1000000000000000003CC /* GriddyDocument */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GriddyDocument; path = Packages/GriddyDocument; sourceTree = SOURCE_ROOT; };
 		6DA1000000000000000003DD /* GriddySymbols */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GriddySymbols; path = Packages/GriddySymbols; sourceTree = SOURCE_ROOT; };
 		6DA1000000000000000003EE /* GriddyValidation */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GriddyValidation; path = Packages/GriddyValidation; sourceTree = SOURCE_ROOT; };
+		B8DF9ADE3D7DEADB833DD957 /* Griddy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Griddy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FEB4625E57EF19464E135A0C /* AppDesign */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AppDesign; path = Packages/AppDesign; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		3E5A6D7E48F3592106B70F8A /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		3E5A6D7E48F3592106B70F8A /* Exceptions for "Griddy" folder in "Griddy" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"Preview Content/Preview Assets.xcassets/Contents.json",
 				macOS/Info.plist,
 			);
 			target = 6F9F7FCAA5B141C4F16FACFB /* Griddy */;
@@ -60,11 +59,7 @@
 		D701F6FF31C00F5986A69EA0 /* Griddy */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				3E5A6D7E48F3592106B70F8A /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
+				3E5A6D7E48F3592106B70F8A /* Exceptions for "Griddy" folder in "Griddy" target */,
 			);
 			path = Griddy;
 			sourceTree = "<group>";
@@ -200,8 +195,6 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				ORGANIZATIONNAME = "Martin Johannesson";
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = B240BDD61A29BC0F5C63D032 /* Build configuration list for PBXProject "Griddy" */;
 			developmentRegion = en;
@@ -475,10 +468,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		A69C49DD169EAB2B5DE30314 /* XCLocalSwiftPackageReference "Packages/AppDesign" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/AppDesign;
-		};
 		6DA1000000000000000004AA /* XCLocalSwiftPackageReference "Packages/GriddyGeometry" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/GriddyGeometry;
@@ -494,6 +483,10 @@
 		6DA1000000000000000004DD /* XCLocalSwiftPackageReference "Packages/GriddySymbols" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/GriddySymbols;
+		};
+		A69C49DD169EAB2B5DE30314 /* XCLocalSwiftPackageReference "Packages/AppDesign" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/AppDesign;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -705,6 +698,26 @@
 			package = B79086FEB46515E4C7952644 /* XCRemoteSwiftPackageReference "KeyValueStore" */;
 			productName = KeyValueStore;
 		};
+		6DA1000000000000000002AA /* GriddyGeometry */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GriddyGeometry;
+		};
+		6DA1000000000000000002BB /* GriddyConstraints */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GriddyConstraints;
+		};
+		6DA1000000000000000002CC /* GriddyDocument */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GriddyDocument;
+		};
+		6DA1000000000000000002DD /* GriddySymbols */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GriddySymbols;
+		};
+		6DA1000000000000000002EE /* GriddyValidation */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GriddyValidation;
+		};
 		784145F3E95BDA1896DF5068 /* SensibleStyling */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 641A9F90755B7EBA9476A32F /* XCRemoteSwiftPackageReference "SensibleStyling" */;
@@ -764,26 +777,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3DC7AA8FE3144B389C27C07C /* XCRemoteSwiftPackageReference "Constructs" */;
 			productName = Constructs;
-		};
-		6DA1000000000000000002AA /* GriddyGeometry */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = GriddyGeometry;
-		};
-		6DA1000000000000000002BB /* GriddyConstraints */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = GriddyConstraints;
-		};
-		6DA1000000000000000002CC /* GriddyDocument */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = GriddyDocument;
-		};
-		6DA1000000000000000002DD /* GriddySymbols */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = GriddySymbols;
-		};
-		6DA1000000000000000002EE /* GriddyValidation */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = GriddyValidation;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -14,6 +14,10 @@ struct BottomStrip: View {
     let document: SymbolDocument
     let state: ValidationState
 
+    /// The master the previews render, following the canvas so the strip shows
+    /// what the designer is editing.
+    let weight: SymbolWeight
+
     /// Selects the primitives an issue is about. An issue naming geometry the
     /// user then has to hunt for is only half a report.
     let reveal: (Set<PrimitiveID>) -> Void
@@ -83,19 +87,9 @@ struct BottomStrip: View {
             ScrollView(.horizontal) {
                 HStack(alignment: .bottom, spacing: 24) {
                     ForEach(document.previewSettings.pointSizes, id: \.self) { size in
-                        VStack(spacing: 6) {
-                            Text("\(Int(size)) pt")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                            // Placeholder until the artwork layer renders. The
-                            // preview strip is deliberately present from the
-                            // start so small-size feedback is never an
-                            // afterthought.
-                            RoundedRectangle(cornerRadius: 3)
-                                .strokeBorder(.quaternary,
-                                              style: StrokeStyle(dash: [2, 2]))
-                                .frame(width: size, height: size)
-                        }
+                        SymbolPreview(document: document,
+                                      weight: weight,
+                                      pointSize: size)
                     }
                 }
                 .padding(.horizontal, 16)
