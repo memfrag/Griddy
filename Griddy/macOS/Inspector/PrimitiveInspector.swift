@@ -49,10 +49,13 @@ struct PrimitiveInspector: View {
                         .monospacedDigit()
                         .frame(width: 72)
                 }
-                Picker("Cap", selection: capBinding) {
-                    Text("Butt").tag(GriddyGeometry.LineCap.butt)
-                    Text("Round").tag(GriddyGeometry.LineCap.round)
-                    Text("Square").tag(GriddyGeometry.LineCap.square)
+                // A line has two distinct ends, so it caps them separately;
+                // every other kind is closed or symmetric and takes one cap.
+                if isLine {
+                    capPicker("Start Cap", selection: endCapBinding(\.startCap))
+                    capPicker("End Cap", selection: endCapBinding(\.endCap))
+                } else {
+                    capPicker("Cap", selection: capBinding)
                 }
                 Picker("Join", selection: joinBinding) {
                     Text("Miter").tag(GriddyGeometry.LineJoin.miter)
@@ -237,6 +240,35 @@ struct PrimitiveInspector: View {
                     }
                     updated.cornerRadius = max(0, newValue)
                     primitive = .roundedRect(updated)
+                }
+            }
+        )
+    }
+
+    private var isLine: Bool {
+        if case .line = primitive { true } else { false }
+    }
+
+    private func capPicker(_ label: String,
+                           selection: Binding<GriddyGeometry.LineCap>) -> some View {
+        Picker(label, selection: selection) {
+            Text("Butt").tag(GriddyGeometry.LineCap.butt)
+            Text("Round").tag(GriddyGeometry.LineCap.round)
+            Text("Square").tag(GriddyGeometry.LineCap.square)
+        }
+    }
+
+    /// A binding to one end's cap. Reads the resolved cap so an un-overridden
+    /// end shows the real value; writing sets that end's override.
+    private func endCapBinding(_ keyPath: WritableKeyPath<GriddyGeometry.StrokeStyleDefinition, GriddyGeometry.LineCap?>) -> Binding<GriddyGeometry.LineCap> {
+        Binding(
+            get: {
+                primitive.attributes.stroke[keyPath: keyPath]
+                    ?? primitive.attributes.stroke.lineCap
+            },
+            set: { newValue in
+                edit("Change Line Cap") {
+                    $0.attributes.stroke[keyPath: keyPath] = newValue
                 }
             }
         )

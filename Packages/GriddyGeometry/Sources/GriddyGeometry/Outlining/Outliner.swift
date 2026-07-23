@@ -37,7 +37,8 @@ public enum Outliner {
             return outlineSegment(from: line.start,
                                   to: line.end,
                                   width: width,
-                                  cap: stroke.lineCap)
+                                  startCap: stroke.resolvedStartCap,
+                                  endCap: stroke.resolvedEndCap)
 
         case .circle(let circle):
             return outlineRing(center: circle.center,
@@ -80,19 +81,34 @@ public enum Outliner {
     ///
     /// Traversal runs down the right-hand side, round the far cap, back up the
     /// left, and round the near cap, which yields a counterclockwise contour.
+    /// Outlines a segment with the same cap on both ends.
     public static func outlineSegment(from start: IconPoint,
                                       to end: IconPoint,
                                       width: Double,
                                       cap: LineCap) -> OutlinePath {
+        outlineSegment(from: start, to: end, width: width,
+                       startCap: cap, endCap: cap)
+    }
+
+    /// Outlines a segment, capping its two ends independently.
+    ///
+    /// The start end is at `from`, the end end at `to`. Passing the same cap for
+    /// both is the ordinary case; passing different ones caps a line
+    /// asymmetrically -- a round lead-in and a flat tail, say.
+    public static func outlineSegment(from start: IconPoint,
+                                      to end: IconPoint,
+                                      width: Double,
+                                      startCap: LineCap,
+                                      endCap: LineCap) -> OutlinePath {
         let radius = width / 2
         guard radius > .ulpOfOne else {
             return .empty
         }
 
         guard let direction = start.vector(to: end).normalized else {
-            // A zero-length segment is a dot under a round cap, and nothing at
-            // all under the others.
-            return cap == .round
+            // A zero-length segment is a dot if either end is round, and nothing
+            // at all otherwise.
+            return startCap == .round || endCap == .round
                 ? outlineDisc(center: start, radius: radius)
                 : .empty
         }
@@ -100,11 +116,13 @@ public enum Outliner {
         let normal = direction.perpendicular
         let offset = normal.scaled(by: radius)
 
-        // Square caps extend the segment by half a width before being capped
-        // flat, which is exactly what a butt cap on a longer segment gives.
-        let extension_ = cap == .square ? direction.scaled(by: radius) : .zero
-        let nearEnd = start.offset(by: extension_.scaled(by: -1))
-        let farEnd = end.offset(by: extension_)
+        // A square cap extends its own end by half a width before closing flat,
+        // which is exactly what a butt cap on a longer segment gives. Each end
+        // extends only for its own cap, so a line can be square at one end and
+        // butt at the other.
+        let along = direction.scaled(by: radius)
+        let nearEnd = start.offset(by: startCap == .square ? along.scaled(by: -1) : .zero)
+        let farEnd = end.offset(by: endCap == .square ? along : .zero)
 
         var segments: [OutlineSegment] = []
 
@@ -119,7 +137,7 @@ public enum Outliner {
                                                 from: rightEnd,
                                                 to: leftEnd,
                                                 normal: normal,
-                                                cap: cap,
+                                                cap: endCap,
                                                 isFarEnd: true))
         segments.append(.line(from: leftEnd, to: leftStart))
         segments.append(contentsOf: capSegments(at: nearEnd,
@@ -127,7 +145,7 @@ public enum Outliner {
                                                 from: leftStart,
                                                 to: rightStart,
                                                 normal: normal,
-                                                cap: cap,
+                                                cap: startCap,
                                                 isFarEnd: false))
 
         return OutlinePath(contours: [

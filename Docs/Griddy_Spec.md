@@ -603,7 +603,10 @@ struct MasterAdjustment: Codable, Equatable {
 ```swift
 struct StrokeStyleDefinition: Codable, Equatable {
     var width: StrokeWidthSource
-    var lineCap: LineCap
+    var widthMultiplier: Double        // per-shape scale on the resolved width
+    var lineCap: LineCap               // both ends, unless overridden
+    var startCap: LineCap?             // per-end overrides, nil = follow lineCap
+    var endCap: LineCap?
     var lineJoin: LineJoin
     var miterLimit: Double
 }
@@ -628,6 +631,8 @@ enum LineJoin: String, Codable {
 ```
 
 Stroke width, cap, and join describe the *construction* stroke. They are not exported as SVG stroke attributes; they are inputs to outlining (§10.5).
+
+`widthMultiplier` scales whatever `width` resolves to, so one shape's line can be made heavier without detaching it from weight propagation — a `.systemWeight` stroke at 1.5 stays half again as heavy at every weight. `startCap` and `endCap` cap a line's two ends independently (a round lead-in and a flat tail, say); they are nil by default, in which case both ends follow `lineCap`. A closed or symmetric primitive has no distinct ends and ignores them. Documents written before these fields existed decode with the multiplier at 1 and the per-end caps nil, i.e. unchanged behaviour.
 
 ### 10.4 Boolean Operations
 

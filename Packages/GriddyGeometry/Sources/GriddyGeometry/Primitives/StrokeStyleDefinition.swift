@@ -21,9 +21,25 @@ public struct StrokeStyleDefinition: Codable, Hashable, Sendable {
     /// propagation. One is no change. See spec 10.3.
     public var widthMultiplier: Double
 
+    /// The cap on both ends of an open primitive, unless one end overrides it.
     public var lineCap: LineCap
+
+    /// Per-end cap overrides for an open primitive, nil to follow ``lineCap``.
+    ///
+    /// A line has a distinct start and end, so its two ends can be capped
+    /// differently — a round lead-in and a flat tail, say. These are line
+    /// concepts; a closed shape has no ends and ignores them. See spec 10.3.
+    public var startCap: LineCap?
+    public var endCap: LineCap?
+
     public var lineJoin: LineJoin
     public var miterLimit: Double
+
+    /// The cap actually used on the start end.
+    public var resolvedStartCap: LineCap { startCap ?? lineCap }
+
+    /// The cap actually used on the end end.
+    public var resolvedEndCap: LineCap { endCap ?? lineCap }
 
     public static let `default` = StrokeStyleDefinition(
         width: .systemWeight,
@@ -35,11 +51,15 @@ public struct StrokeStyleDefinition: Codable, Hashable, Sendable {
     public init(width: StrokeWidthSource,
                 widthMultiplier: Double = 1,
                 lineCap: LineCap,
+                startCap: LineCap? = nil,
+                endCap: LineCap? = nil,
                 lineJoin: LineJoin,
                 miterLimit: Double) {
         self.width = width
         self.widthMultiplier = widthMultiplier
         self.lineCap = lineCap
+        self.startCap = startCap
+        self.endCap = endCap
         self.lineJoin = lineJoin
         self.miterLimit = miterLimit
     }
@@ -47,16 +67,21 @@ public struct StrokeStyleDefinition: Codable, Hashable, Sendable {
     // MARK: Codable
 
     private enum CodingKeys: String, CodingKey {
-        case width, widthMultiplier, lineCap, lineJoin, miterLimit
+        case width, widthMultiplier, lineCap, startCap, endCap
+        case lineJoin, miterLimit
     }
 
-    /// Decodes documents written before the multiplier existed, which take 1.
+    /// Decodes documents written before the multiplier and per-end caps
+    /// existed. The multiplier takes 1; the per-end caps take nil, so both ends
+    /// follow `lineCap` exactly as before.
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         width = try container.decode(StrokeWidthSource.self, forKey: .width)
         widthMultiplier = try container.decodeIfPresent(
             Double.self, forKey: .widthMultiplier) ?? 1
         lineCap = try container.decode(LineCap.self, forKey: .lineCap)
+        startCap = try container.decodeIfPresent(LineCap.self, forKey: .startCap)
+        endCap = try container.decodeIfPresent(LineCap.self, forKey: .endCap)
         lineJoin = try container.decode(LineJoin.self, forKey: .lineJoin)
         miterLimit = try container.decode(Double.self, forKey: .miterLimit)
     }
