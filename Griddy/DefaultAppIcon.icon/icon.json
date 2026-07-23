@@ -7,8 +7,15 @@
       "layers" : [
         {
           "glass" : false,
-          "image-name" : "hammer-blueprint.png",
-          "name" : "hammer-blueprint"
+          "image-name" : "Image 2.png",
+          "name" : "Image 2",
+          "position" : {
+            "scale" : 0.7,
+            "translation-in-points" : [
+              0,
+              -26.299999999999955
+            ]
+          }
         }
       ],
       "shadow" : {

@@ -1151,7 +1151,9 @@ Templates reach Griddy in two shapes, and conflating them has already caused one
 
 Both dialects import correctly and both export successfully; the SF Symbols app accepts either. But **only the editor dialect records a symbol name**, so name substitution (§14.5) is a no-op on Apple's own files and correctly so.
 
-`Resources/BlankSymbolTemplate.svg` is currently derived from an editor-processed template, and therefore carries the wrapper group and the spurious `fill-rule`. This is cosmetically wrong but functionally harmless, and it is the structure the verified export path was tested against. Regenerating it from a pristine Apple template is worth doing deliberately, with fixture coverage of both dialects, rather than as a drive-by.
+`Resources/BlankSymbolTemplate.svg` is now the Apple dialect: generated from a pristine SF Symbols authoring template (`app.svg`) by emptying the three slot groups, with nothing else touched. It carries no wrapper group, no `<title>`, no `custom.` root, and no `fill-rule`. A new document therefore starts from exactly the structure the SF Symbols app writes, rather than one a vector editor rewrote.
+
+The switch is covered on both sides: the Apple-dialect blank imports as an empty document with real metrics, and a symbol drawn on it exports and reimports interpolatably — the same guarantee previously proven only for the Sketch dialect. Both dialects remain supported on import, since a user may still bring in an editor-processed template.
 
 ### 14.3 Path-to-Primitive Inference
 
