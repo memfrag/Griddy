@@ -539,7 +539,9 @@ The template's geometry follows entirely from that, and so does the split betwee
 
 The cost is that **horizontal position in the editor carries no information**. Two documents whose artwork differs only by a horizontal translation export byte-for-byte identically. Vertical position, by contrast, is preserved exactly, because the baseline is a font-wide metric that nothing normalises against. Both are asserted by tests.
 
-> **Open Question:** Whether the editor should surface this — by showing the resolved bearings in the inspector, by offering direct bearing editing in place of the override API, or by constraining horizontal dragging. At present the canvas permits a gesture that has no effect on the output, which is a poor thing to leave undocumented in the UI.
+**Resolved: the inspector surfaces the metrics.** The document inspector's Margins section shows the advance and both side bearings for the active master, and lets each bearing be overridden per weight. Editing a bearing establishes the override seeded from its current effective value, so changing one does not zero the other; the advance stays computed, so fixing the bearings pins the padding rather than the width. The canvas margin guides are drawn for the active master, so the numbers and the guides always agree.
+
+The remaining half of the question — whether horizontal dragging should be *constrained*, since it has no effect on the export — is deliberately left open. Making the metrics visible and editable was the higher-value change; constraining a gesture is a small addition if the invisibility turns out to mislead in practice. Vertical position is real design intent (§9.5) and must stay free regardless.
 
 ## 10. Geometry Model
 
