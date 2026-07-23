@@ -11,19 +11,17 @@ import GriddyGeometry
 struct GuideSetTests {
 
     private var grid: GridDefinition {
-        GridDefinition(canvasSize: IconSize(width: 16, height: 32),
-                       safeArea: IconRect(x: 1, y: 1, width: 14, height: 14))
+        GridDefinition(canvasSize: IconSize(width: 16, height: 32))
     }
 
-    @Test("The default shows four guides, not all six")
+    @Test("The default shows four guides, not all of them")
     func defaultIsRestrained() {
-        // Key shapes and the safe area are advisory; showing everything at once
-        // is what made the canvas unreadable.
+        // Key shapes are advisory; showing every guide at once is what made the
+        // canvas unreadable.
         #expect(GuideSet.default.contains(.primaryGrid))
         #expect(GuideSet.default.contains(.baseline))
         #expect(GuideSet.default.contains(.margins))
         #expect(!GuideSet.default.contains(.keyShapes))
-        #expect(!GuideSet.default.contains(.safeArea))
     }
 
     @Test("Every guide is listed in the menu")
@@ -33,7 +31,7 @@ struct GuideSetTests {
             $0.insert($1.guide)
         }
         #expect(listed == .all)
-        #expect(GuideSet.ordered.count == 6)
+        #expect(GuideSet.ordered.count == 5)
     }
 
     @Test("The grid flags still read and write through to the set")
@@ -59,7 +57,8 @@ struct GuideSetTests {
 
     @Test("Documents written before guides were a set still open")
     func decodesLegacyFlags() throws {
-        // The old shape: two booleans and no visibleGuides key.
+        // The old shape: two booleans, no visibleGuides key, and a now-removed
+        // safeArea key that must be ignored rather than rejected.
         let legacy = """
             {"canvasSize":{"width":16,"height":32},
              "safeArea":{"origin":{"x":1,"y":1},"size":{"width":14,"height":14}},

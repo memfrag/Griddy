@@ -62,7 +62,7 @@ import KeyValueStore
     public init(store: AnyKeyValueStore<AppSettings.Key>? = nil) {
         self.store = store ?? .defaultStore
         colorScheme = self.store.load(.colorScheme, default: .system)
-        spaceToolBehavior = self.store.load(.spaceToolBehavior, default: .momentary)
+        spaceToolBehavior = self.store.load(.spaceToolBehavior, default: .toggle)
 
         // <-- (3 / 3) Add initializer for new property here.
     }

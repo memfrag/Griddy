@@ -26,8 +26,8 @@ public struct GuideSet: OptionSet, Codable, Hashable, Sendable {
     /// Apple's proportional templates for the document's design intent.
     public static let keyShapes = GuideSet(rawValue: 1 << 2)
 
-    /// The inset region inside the margins.
-    public static let safeArea = GuideSet(rawValue: 1 << 3)
+    // Bit 1 << 3 was `safeArea`, a guide since removed. It is left unclaimed so
+    // an older document's bitmask still decodes to the right remaining guides.
 
     /// Baseline and capline: the horizontal edges of the cap-height box.
     ///
@@ -41,13 +41,13 @@ public struct GuideSet: OptionSet, Codable, Hashable, Sendable {
     public static let margins = GuideSet(rawValue: 1 << 5)
 
     public static let all: GuideSet = [
-        .primaryGrid, .secondaryGrid, .keyShapes, .safeArea, .baseline, .margins
+        .primaryGrid, .secondaryGrid, .keyShapes, .baseline, .margins
     ]
 
     /// What a new document shows.
     ///
-    /// Key shapes and the safe area are off: both are advisory, and six guide
-    /// systems at once is not a canvas anyone can read.
+    /// Key shapes are off: they are advisory, and showing every guide at once
+    /// is not a canvas anyone can read.
     public static let `default`: GuideSet = [
         .primaryGrid, .secondaryGrid, .baseline, .margins
     ]
@@ -61,7 +61,6 @@ public extension GuideSet {
         (.secondaryGrid, "Subdivisions"),
         (.baseline, "Baseline and Capline"),
         (.margins, "Margins"),
-        (.safeArea, "Safe Area"),
         (.keyShapes, "Key Shapes")
     ]
 

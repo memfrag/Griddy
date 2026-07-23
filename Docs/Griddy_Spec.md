@@ -214,7 +214,6 @@ Symbol
   Construction
     Grid
     Key Shapes
-    Safe Area
     Margins
     Baseline
   Layers
@@ -245,7 +244,6 @@ The canvas has three conceptual layers:
 
 - Primary grid.
 - Secondary grid.
-- Safe area.
 - Margins.
 - Baseline.
 - Alignment guides.
@@ -433,7 +431,6 @@ The export transform is therefore a uniform scale, a Y flip, and a translation t
 ```swift
 struct GridDefinition: Codable, Equatable {
     var canvasSize: CGSizeCodable
-    var safeArea: RectCodable
     var primaryInterval: Double
     var secondaryDivisions: Int
     var showsPrimaryGrid: Bool
@@ -442,7 +439,9 @@ struct GridDefinition: Codable, Equatable {
 }
 ```
 
-`canvasSize` is the design area and `safeArea` is derived from the margin box, both **populated from the template** (§9.1) rather than user-authored. Note that the safe area insets the *margin* box: insetting the cap-height box would mark most real artwork unsafe. The remaining fields are user-configurable, with these defaults:
+`canvasSize` is the design area, **populated from the template** (§9.1) rather than user-authored. The remaining fields are user-configurable, with these defaults:
+
+An earlier revision carried a `safeArea` field — an inset of the margin box, drawn as a guide. It has been removed: the definition was circular (the margins are derived from the artwork, so insetting them to bound the artwork bounds nothing), and SF Symbols has no safe-area concept. The margins (§9.5) are the horizontal reference. Documents written with a `safeArea` still open; the key is ignored.
 
 ```text
 primaryInterval    1.0u        (16 rows between baseline and capline)
@@ -1561,7 +1560,6 @@ The first version should be disciplined and narrow.
 4. Display:
    - Primary grid.
    - Secondary grid.
-   - Safe area.
    - Margins.
    - Baseline.
    - Configurable key shapes.
@@ -1953,7 +1951,6 @@ Possible post-MVP additions:
 - **Template:** An SVG exported from Apple's SF Symbols app.
 - **Unit (u):** One sixteenth of the template's cap height.
 - **Visual center:** Perceived center of mass of the rendered icon.
-- **Safe area:** Region where artwork should generally remain.
 
 ## 26. Summary
 

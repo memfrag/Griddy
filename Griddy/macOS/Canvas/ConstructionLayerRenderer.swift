@@ -6,8 +6,8 @@ import SwiftUI
 import GriddyGeometry
 import GriddyDocument
 
-/// Draws the construction layer: grid, safe area, margins, baseline, key
-/// shapes and symmetry axes. See spec 8.3.
+/// Draws the construction layer: grid, margins, baseline, and key shapes.
+/// See spec 8.3.
 struct ConstructionLayerRenderer {
 
     let document: SymbolDocument
@@ -52,10 +52,6 @@ struct ConstructionLayerRenderer {
 
         if guides.contains(.keyShapes) {
             drawKeyShapes(in: &context)
-        }
-
-        if guides.contains(.safeArea) {
-            drawSafeArea(in: &context)
         }
 
         if guides.contains(.baseline) {
@@ -133,13 +129,6 @@ struct ConstructionLayerRenderer {
         }
     }
 
-    private func drawSafeArea(in context: inout GraphicsContext) {
-        let rect = transform.rect(document.grid.safeArea)
-        context.stroke(Path(roundedRect: rect, cornerRadius: transform.length(1)),
-                       with: .color(.safeArea),
-                       style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
-    }
-
     private func drawBaselineAndCapline(in context: inout GraphicsContext) {
         var path = Path()
 
@@ -197,7 +186,6 @@ private extension Color {
     static let marginEdge = Color.orange.opacity(0.55)
     static let gridPrimary = Color.secondary.opacity(0.28)
     static let gridSecondary = Color.secondary.opacity(0.12)
-    static let safeArea = Color.green.opacity(0.7)
     static let keyShape = Color.secondary.opacity(0.35)
     static let keyShapeEmphasised = Color.accentColor.opacity(0.65)
     static let baseline = Color.blue.opacity(0.45)
