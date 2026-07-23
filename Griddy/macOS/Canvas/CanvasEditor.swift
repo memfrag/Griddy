@@ -19,6 +19,11 @@ final class CanvasEditor {
     /// momentary mode. Nil when space is not holding Select. See
     /// ``SpaceToolBehavior``.
     var toolBeforeSpace: Tool?
+
+    /// Whether a crosshair is currently pushed onto the cursor stack, so the
+    /// push is balanced by exactly one pop. Not observed: it mirrors AppKit
+    /// state rather than driving the view.
+    @ObservationIgnored var crosshairPushed = false
     var selection: Set<PrimitiveID> = []
     var activeWeight: SymbolWeight = .regular
 

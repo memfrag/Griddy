@@ -24,6 +24,9 @@ struct SymbolCanvasView: View {
     /// it is claimed explicitly on appearance and on the first drag.
     @FocusState private var isFocused: Bool
 
+    /// Whether the pointer is over the canvas, for the crosshair cursor.
+    @State private var isHovering = false
+
     private var document: SymbolDocument {
         file.document
     }
@@ -48,11 +51,18 @@ struct SymbolCanvasView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        // A crosshair while a drawing tool is active, so it is obvious the next
-        // click will draw rather than select. See spec 8.3.
-        .canvasCursor(editor.tool.isDrawingTool ? .crosshair : nil)
         .gesture(dragGesture)
         .background(PaneBackground())
+        // A crosshair while a drawing tool is active, so it is obvious the next
+        // click will draw rather than select. Pushed onto the cursor stack
+        // rather than `set()`, which AppKit resets on the next mouse move; a
+        // pushed cursor persists until popped. See spec 8.3.
+        .onHover { hovering in
+            isHovering = hovering
+            syncCrosshair()
+        }
+        .onChange(of: editor.tool) { _, _ in syncCrosshair() }
+        .onDisappear { popCrosshairIfNeeded() }
         // Focusable so the canvas receives key events. Space temporarily or
         // permanently switches to Select while drawing; see spec 8.3.
         .focusable()
@@ -104,6 +114,32 @@ struct SymbolCanvasView: View {
         default:
             // A repeat while the key is held: swallow it so it does not beep.
             return .handled
+        }
+    }
+
+    // MARK: Cursor
+
+    /// Pushes or pops the crosshair so it is shown exactly while the pointer is
+    /// over the canvas and a drawing tool is active.
+    ///
+    /// A pushed cursor survives mouse movement, which a bare `set()` does not —
+    /// AppKit restores the default on the next move unless a cursor rect or
+    /// tracking area re-sets it, and neither plays nicely with the SwiftUI drag
+    /// gesture. The `crosshairPushed` flag keeps every push matched to one pop.
+    private func syncCrosshair() {
+        let wantsCrosshair = isHovering && editor.tool.isDrawingTool
+        if wantsCrosshair, !editor.crosshairPushed {
+            NSCursor.crosshair.push()
+            editor.crosshairPushed = true
+        } else if !wantsCrosshair {
+            popCrosshairIfNeeded()
+        }
+    }
+
+    private func popCrosshairIfNeeded() {
+        if editor.crosshairPushed {
+            NSCursor.pop()
+            editor.crosshairPushed = false
         }
     }
 
