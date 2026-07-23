@@ -48,6 +48,9 @@ struct SymbolCanvasView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
+        // A crosshair while a drawing tool is active, so it is obvious the next
+        // click will draw rather than select. See spec 8.3.
+        .canvasCursor(editor.tool.isDrawingTool ? .crosshair : nil)
         .gesture(dragGesture)
         .background(PaneBackground())
         // Focusable so the canvas receives key events. Space temporarily or
