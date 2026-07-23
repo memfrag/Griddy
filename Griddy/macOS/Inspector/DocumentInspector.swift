@@ -63,6 +63,8 @@ struct DocumentInspector: View {
                 row("Snap", value: "\(format(document.grid.snapTolerance)) u")
             }
 
+            MarginSection(file: file, editor: editor)
+
             Section("Export") {
                 row("Authored masters", value: "\(document.masters.count)")
                 row("Exported slots", value: "\(SymbolSlot.all.count)")
