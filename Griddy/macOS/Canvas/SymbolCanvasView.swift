@@ -55,7 +55,7 @@ struct SymbolCanvasView: View {
         .focusable()
         .focusEffectDisabled()
         .focused($isFocused)
-        .onKeyPress(.space, phases: [.down, .up], action: handleSpace)
+        .onKeyPress(.space, phases: [.down, .up, .repeat], action: handleSpace)
         .onAppear { isFocused = true }
         .onChange(of: document.primitives.count) {
             editor.pruneSelection(against: document)
@@ -67,35 +67,40 @@ struct SymbolCanvasView: View {
     /// Momentary: hold to select, release to return to the drawing tool.
     /// Toggle: tap to switch and stay. Either way it does nothing unless a
     /// drawing tool is active, and never interrupts a drag in progress.
+    ///
+    /// Every space event is reported handled, including the repeats a held key
+    /// generates. Returning `.ignored` would let the key propagate up a
+    /// responder chain that has no other use for space, and an unhandled key
+    /// event rings the system bell — which is what a held space did.
     private func handleSpace(_ press: KeyPress) -> KeyPress.Result {
         switch press.phase {
         case .down:
-            // A key repeat re-fires `.down`; act only on the first press so a
-            // held space in momentary mode does not keep re-saving Select as
-            // the tool to restore.
-            guard editor.toolBeforeSpace == nil,
-                  editor.tool.isDrawingTool,
-                  editor.drag == nil else {
-                return .ignored
+            // Act only on the first press. Repeats arrive as `.repeat` and,
+            // even if one slips in as `.down`, the guard stops it re-saving
+            // Select as the tool to restore.
+            if editor.toolBeforeSpace == nil,
+               editor.tool.isDrawingTool,
+               editor.drag == nil {
+                editor.toolBeforeSpace = editor.tool
+                editor.tool = .select
             }
-            editor.toolBeforeSpace = editor.tool
-            editor.tool = .select
             return .handled
 
         case .up:
-            guard let previous = editor.toolBeforeSpace else {
-                return .ignored
+            if let previous = editor.toolBeforeSpace {
+                // Momentary returns to the drawing tool; toggle keeps Select.
+                // The saved tool is cleared either way so the next press starts
+                // fresh.
+                if settings.spaceToolBehavior == .momentary {
+                    editor.tool = previous
+                }
+                editor.toolBeforeSpace = nil
             }
-            // Momentary restores the drawing tool; toggle keeps Select. The
-            // saved tool is cleared either way so the next press starts fresh.
-            if settings.spaceToolBehavior == .momentary {
-                editor.tool = previous
-            }
-            editor.toolBeforeSpace = nil
             return .handled
 
         default:
-            return .ignored
+            // A repeat while the key is held: swallow it so it does not beep.
+            return .handled
         }
     }
 
