@@ -9,14 +9,25 @@ import Foundation
 @Suite("Primitive handles")
 struct PrimitiveHandleTests {
 
-    @Test("A circle exposes a radius handle at its edge")
-    func circleRadiusHandle() {
+    @Test("A circle exposes a centre handle and a radius handle")
+    func circleHandles() {
         let circle = IconPrimitive.circle(
             CirclePrimitive(center: IconPoint(x: 5, y: 5), radius: 3))
         let handles = circle.handles
-        #expect(handles.count == 1)
-        #expect(handles.first?.handle == .radius)
-        #expect(handles.first?.position == IconPoint(x: 8, y: 5))
+        #expect(handles.count == 2)
+        #expect(handles.contains { $0.handle == .center
+                                   && $0.position == IconPoint(x: 5, y: 5) })
+        #expect(handles.contains { $0.handle == .radius
+                                   && $0.position == IconPoint(x: 8, y: 5) })
+    }
+
+    @Test("Dragging the centre handle moves the circle without resizing")
+    func dragCircleCentre() {
+        let circle = IconPrimitive.circle(
+            CirclePrimitive(center: IconPoint(x: 5, y: 5), radius: 3))
+        let moved = circle.moving(.center, to: IconPoint(x: 10, y: 2))
+        #expect(moved.anchor == IconPoint(x: 10, y: 2))
+        #expect(moved.radius == 3)
     }
 
     @Test("Dragging the radius handle resizes the circle")

@@ -12,6 +12,10 @@ import Foundation
 /// primitive and "move this vertex" on another. See spec 8.3.
 public enum PrimitiveHandle: Hashable, Sendable {
 
+    /// A centre-anchored primitive's centre, dragged to move it. Duplicates a
+    /// body drag but gives a precise grab point, and its dot marks the centre.
+    case center
+
     /// The extent of a circle, dragged to change its radius.
     case radius
 
@@ -76,7 +80,8 @@ public extension IconPrimitive {
     var handles: [HandlePoint] {
         switch self {
         case .circle(let circle):
-            return [HandlePoint(.radius,
+            return [HandlePoint(.center, at: circle.center),
+                    HandlePoint(.radius,
                                 at: IconPoint(x: circle.center.x + circle.radius,
                                               y: circle.center.y))]
 
@@ -87,7 +92,8 @@ public extension IconPrimitive {
         case .arc(let arc):
             let mid = IconAngle(radians: arc.startAngle.radians
                 + (arc.isClockwise ? -arc.sweep : arc.sweep) / 2)
-            return [HandlePoint(.arcStart, at: arc.startPoint),
+            return [HandlePoint(.center, at: arc.center),
+                    HandlePoint(.arcStart, at: arc.startPoint),
                     HandlePoint(.arcEnd, at: arc.endPoint),
                     HandlePoint(.arcRadius, at: arc.point(atAngle: mid))]
 
@@ -127,6 +133,9 @@ public extension IconPrimitive {
     /// spanning the dragged corner and its fixed opposite.
     func moving(_ handle: PrimitiveHandle, to point: IconPoint) -> IconPrimitive {
         switch (self, handle) {
+        case (_, .center):
+            return movingAnchor(to: point)
+
         case (.circle(var circle), .radius):
             circle.radius = max(0, circle.center.distance(to: point))
             return .circle(circle)

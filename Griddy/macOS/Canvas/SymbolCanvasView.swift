@@ -342,6 +342,8 @@ struct SymbolCanvasView: View {
         let kind = document.primitive(withID: id)?.kindName ?? "Primitive"
         let verb: String
         switch handle {
+        case .center:
+            verb = "Move"
         case .radius, .arcRadius, .corner:
             verb = "Resize"
         case .lineStart, .lineEnd, .arcStart, .arcEnd, .vertex:
