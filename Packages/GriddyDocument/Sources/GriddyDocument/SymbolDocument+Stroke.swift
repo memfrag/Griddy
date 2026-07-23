@@ -27,7 +27,11 @@ extension SymbolDocument {
             .adjustment(for: primitive.id)?
             .strokeWidthDelta ?? 0
 
+        // The per-shape multiplier scales the base so a wider shape stays wider
+        // at every weight; the master delta is an absolute tweak on top.
+        let scaled = base * primitive.attributes.stroke.widthMultiplier
+
         // A negative width is meaningless and would invert the outline.
-        return max(0, base + delta)
+        return max(0, scaled + delta)
     }
 }

@@ -11,6 +11,16 @@ import Foundation
 public struct StrokeStyleDefinition: Codable, Hashable, Sendable {
 
     public var width: StrokeWidthSource
+
+    /// A per-primitive multiplier on the resolved width.
+    ///
+    /// Applied to whatever ``width`` produces, so a `.systemWeight` stroke at
+    /// 1.5 stays half again as heavy at *every* weight rather than becoming a
+    /// fixed thickness that stops tracking the master. This is the knob for
+    /// "make this one shape's line wider" without detaching it from weight
+    /// propagation. One is no change. See spec 10.3.
+    public var widthMultiplier: Double
+
     public var lineCap: LineCap
     public var lineJoin: LineJoin
     public var miterLimit: Double
@@ -23,13 +33,32 @@ public struct StrokeStyleDefinition: Codable, Hashable, Sendable {
     )
 
     public init(width: StrokeWidthSource,
+                widthMultiplier: Double = 1,
                 lineCap: LineCap,
                 lineJoin: LineJoin,
                 miterLimit: Double) {
         self.width = width
+        self.widthMultiplier = widthMultiplier
         self.lineCap = lineCap
         self.lineJoin = lineJoin
         self.miterLimit = miterLimit
+    }
+
+    // MARK: Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case width, widthMultiplier, lineCap, lineJoin, miterLimit
+    }
+
+    /// Decodes documents written before the multiplier existed, which take 1.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        width = try container.decode(StrokeWidthSource.self, forKey: .width)
+        widthMultiplier = try container.decodeIfPresent(
+            Double.self, forKey: .widthMultiplier) ?? 1
+        lineCap = try container.decode(LineCap.self, forKey: .lineCap)
+        lineJoin = try container.decode(LineJoin.self, forKey: .lineJoin)
+        miterLimit = try container.decode(Double.self, forKey: .miterLimit)
     }
 }
 

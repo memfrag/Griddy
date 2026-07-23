@@ -41,6 +41,14 @@ struct PrimitiveInspector: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
+                LabeledContent("Width ×") {
+                    TextField("Multiplier", value: strokeMultiplierBinding,
+                              format: .number.precision(.fractionLength(0...2)))
+                        .labelsHidden()
+                        .multilineTextAlignment(.trailing)
+                        .monospacedDigit()
+                        .frame(width: 72)
+                }
                 Picker("Cap", selection: capBinding) {
                     Text("Butt").tag(GriddyGeometry.LineCap.butt)
                     Text("Round").tag(GriddyGeometry.LineCap.round)
@@ -229,6 +237,18 @@ struct PrimitiveInspector: View {
                     }
                     updated.cornerRadius = max(0, newValue)
                     primitive = .roundedRect(updated)
+                }
+            }
+        )
+    }
+
+    /// The per-shape stroke multiplier, clamped so it cannot invert the outline.
+    private var strokeMultiplierBinding: Binding<Double> {
+        Binding(
+            get: { primitive.attributes.stroke.widthMultiplier },
+            set: { newValue in
+                edit("Change Line Width") {
+                    $0.attributes.stroke.widthMultiplier = max(0, newValue)
                 }
             }
         )
