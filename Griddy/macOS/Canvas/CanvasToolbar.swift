@@ -129,6 +129,29 @@ struct EditCommands: Commands {
             .disabled(file == nil)
         }
 
+        // Its own menu rather than crowded into Edit: these are the only
+        // operations that change what the artwork *is* rather than where it
+        // sits, and there are four of them.
+        CommandMenu("Shape") {
+            Button("Union") { combine(.union) }
+                .keyboardShortcut("u", modifiers: [.command, .shift])
+                .disabled(combineRefusal != nil)
+
+            Button("Subtract Front") { combine(.subtract) }
+                .keyboardShortcut("s", modifiers: [.command, .option])
+                .disabled(combineRefusal != nil)
+
+            Button("Intersect") { combine(.intersect) }
+                .keyboardShortcut("i", modifiers: [.command, .option])
+                .disabled(combineRefusal != nil)
+
+            Divider()
+
+            Button("Release Compound") { release() }
+                .keyboardShortcut("u", modifiers: [.command, .option])
+                .disabled(!canRelease)
+        }
+
         CommandGroup(after: .pasteboard) {
             Button("Delete Selection") {
                 delete()
@@ -150,6 +173,65 @@ struct EditCommands: Commands {
             .disabled(file == nil)
 
             Divider()
+        }
+    }
+
+    // MARK: Booleans
+
+    /// Why the combine commands are unavailable, if they are.
+    private var combineRefusal: SymbolDocument.CompoundRefusal? {
+        guard let editor, let file else {
+            return .tooFewOperands(0)
+        }
+        return file.document.canCombine(editor.selection)
+    }
+
+    private var canRelease: Bool {
+        guard let editor, let file else {
+            return false
+        }
+        return file.document.containsCompound(editor.selection)
+    }
+
+    private func combine(_ operation: CompoundOperation) {
+        guard let editor, let file else {
+            return
+        }
+        let ids = editor.selection
+
+        // Selecting the result rather than clearing: the compound is what the
+        // user just made, and it is what they will want to move or subtract
+        // from next.
+        var created: PrimitiveID?
+        file.perform(name(for: operation),
+                     undoManager: undoManager ?? nil) { document in
+            created = try? document.combinePrimitives(withIDs: ids,
+                                                      operation: operation)
+        }
+        editor.selection = created.map { [$0] } ?? []
+    }
+
+    private func release() {
+        guard let editor, let file else {
+            return
+        }
+        let ids = editor.selection
+
+        var restored: Set<PrimitiveID> = []
+        file.perform("Release Compound",
+                     undoManager: undoManager ?? nil) { document in
+            restored = document.releaseCompounds(withIDs: ids)
+        }
+        // Leaving nothing selected after a release is disorienting -- the
+        // shapes reappear and the user has to find them again.
+        editor.selection = restored
+    }
+
+    private func name(for operation: CompoundOperation) -> String {
+        switch operation {
+        case .union: "Union"
+        case .subtract: "Subtract"
+        case .intersect: "Intersect"
         }
     }
 

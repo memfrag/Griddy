@@ -166,7 +166,9 @@ struct ArtworkLayerRenderer {
         case .symmetricPath(let path):
             path.points
         case .compound, .importedPath:
-            PrimitiveGeometry.bounds(of: primitive).map(corners) ?? []
+            // Via the document, which is the only thing that can follow a
+            // compound's child identifiers to find its extent.
+            document.bounds(of: primitive).map(corners) ?? []
         }
     }
 

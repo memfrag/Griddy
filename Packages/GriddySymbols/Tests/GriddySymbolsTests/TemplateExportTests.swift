@@ -622,3 +622,59 @@ struct CentringTests {
         }
     }
 }
+
+@Suite("Boolean export")
+struct BooleanExportProbe {
+
+    @Test("A subtracted compound exports and reimports as interpolatable")
+    func subtractedCompoundExports() throws {
+        var package = try drawnDocument()
+        package.document.primitives = []
+        package.document.layers = [SymbolLayer(name: "Body", role: .outerBody)]
+
+        // A disc with a smaller disc bitten out of it.
+        let centre = package.document.coordinateSystem.capHeightBox.center
+        let outer = CirclePrimitive(center: centre, radius: 6)
+        let inner = CirclePrimitive(center: centre, radius: 3)
+        package.document.addPrimitive(.circle(outer))
+        package.document.addPrimitive(.circle(inner))
+        let compound = CompoundPrimitive(operation: .subtract,
+                                         children: [outer.id, inner.id])
+        package.document.addPrimitive(.compound(compound))
+
+        let (data, report) = try SFSymbolTemplateExporter.export(
+            document: package.document, sourceTemplate: package.sourceTemplate)
+
+        // Interpolatable: every master shares the command sequence.
+        let reimported = try SFSymbolTemplateImporter.import(data)
+        func kinds(_ w: SymbolWeight) -> [String] {
+            (reimported.variants[SymbolSlot(weight: w, scale: .small)]?
+                .commands ?? []).map { c in
+                switch c {
+                case .move: "M"; case .line: "L"; case .cubic: "C"; case .close: "Z"
+                }
+            }
+        }
+        #expect(kinds(.ultralight) == kinds(.regular))
+        #expect(kinds(.black) == kinds(.regular))
+        #expect(!kinds(.regular).isEmpty)
+
+        // The subtraction actually did something: the same two circles unioned
+        // export to a different outline than subtracted.
+        var unionPackage = try drawnDocument()
+        unionPackage.document.primitives = package.document.primitives
+        unionPackage.document.layers = package.document.layers
+        // Swap the compound's operation.
+        unionPackage.document.primitives = unionPackage.document.primitives.map {
+            primitive in
+            guard case .compound(var c) = primitive else { return primitive }
+            c.operation = .union
+            return .compound(c)
+        }
+        let (unionData, _) = try SFSymbolTemplateExporter.export(
+            document: unionPackage.document,
+            sourceTemplate: unionPackage.sourceTemplate)
+        #expect(unionData != data, "subtract and union produced the same file")
+        _ = report
+    }
+}

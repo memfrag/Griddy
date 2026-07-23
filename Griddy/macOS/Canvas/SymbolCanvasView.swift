@@ -120,9 +120,10 @@ struct SymbolCanvasView: View {
             return
         }
 
-        let hit = HitTesting.topmost(in: document.primitivesInDrawOrder,
-                                     at: point,
-                                     tolerance: hitTolerance)
+        // Roots only, and compound-aware: hit testing the flat list would find
+        // a compound's children, which are still in the document but no longer
+        // drawn, so clicking a combined shape would select an invisible operand.
+        let hit = document.topmostPrimitive(at: point, tolerance: hitTolerance)
 
         if let hit, document.isEditable(hit.id) {
             if !editor.selection.contains(hit.id) {
@@ -153,7 +154,10 @@ struct SymbolCanvasView: View {
 
             if delta.length > .ulpOfOne {
                 file.updateWithoutUndo { document in
-                    document.translatePrimitives(withIDs: editor.selection, by: delta)
+                    // A compound holds only references, so moving the wrapper
+                    // alone would move nothing at all.
+                    document.translateIncludingChildren(
+                        withIDs: editor.selection, by: delta)
                     // Whatever depends on the moved geometry follows it. The
                     // held primitives are pinned so the drag is not undone by
                     // the constraints that rely on it.
@@ -194,8 +198,7 @@ struct SymbolCanvasView: View {
                                undoManager: undoManager)
 
         case .marquee:
-            let picked = HitTesting.primitives(in: document.primitivesInDrawOrder,
-                                               intersecting: drag.rect)
+            let picked = document.rootPrimitives(intersecting: drag.rect)
             editor.selection = Set(picked.map(\.id))
         }
     }
