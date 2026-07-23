@@ -60,7 +60,9 @@ public enum ConstraintSolver {
         case .onGrid, .equalRadius, .equalLength, .equalSpacing,
              .parallel, .perpendicular, .fixedAngle, .opticalOffset:
             // These constrain size, angle or spacing rather than position, so
-            // they leave translation free.
+            // they leave translation free. Equal-spacing does move a primitive
+            // along its axis, but only when the primitive is not the one being
+            // dragged; resolution handles that, not the drag restriction.
             return .free
         }
     }
@@ -150,11 +152,28 @@ public enum ConstraintSolver {
                     primitive.settingDirection(fixedAngle.angle.direction)
             }
 
-        case .onKeyShape, .fixedDistance, .equalLength, .equalSpacing,
-             .opticalOffset:
-            // Recorded and displayed, but not yet enforced. Each needs a
-            // resolution rule that is more than a projection, and enforcing
-            // them half-correctly would be worse than not at all.
+        case .onKeyShape(let onKeyShape):
+            applyOnKeyShape(onKeyShape, to: &primitives, context: context)
+
+        case .fixedDistance(let fixedDistance):
+            applyFixedDistance(fixedDistance, to: &primitives, pinned: pinned)
+
+        case .equalLength(let equal):
+            applyShared(equal.primitiveIDs, in: &primitives, pinned: pinned) {
+                $0.length
+            } set: { primitive, length in
+                primitive.settingLength(length)
+            }
+
+        case .equalSpacing(let spacing):
+            applyEqualSpacing(spacing, to: &primitives, pinned: pinned)
+
+        case .opticalOffset:
+            // Left unenforced deliberately. An optical offset is a manual nudge
+            // away from where geometry alone would put a primitive, so it has
+            // no reference position to project back onto -- re-applying it would
+            // need to know the "un-nudged" location, which the document does not
+            // store. See Constraint.isEnforced.
             break
         }
     }
@@ -287,6 +306,110 @@ public enum ConstraintSolver {
 
         primitives[constraint.primitiveID] = moving.movingAnchor(
             to: targetCentre.offset(by: direction.scaled(by: movingRadius + targetRadius)))
+    }
+
+    /// Fits a primitive to a key shape.
+    ///
+    /// The key shapes are size references (§9.4), so "on" one means matching its
+    /// extent: the primitive centres on the key shape, and if it has a radius,
+    /// takes half the key shape's smaller dimension plus the overshoot round
+    /// shapes need to look the same size as flat ones. A primitive without a
+    /// radius is only recentred; resizing an arbitrary outline to a box is not
+    /// something this projection model can do.
+    private static func applyOnKeyShape(_ constraint: OnKeyShapeConstraint,
+                                        to primitives: inout [PrimitiveID: IconPrimitive],
+                                        context: ConstraintContext) {
+        guard let primitive = primitives[constraint.primitiveID],
+              let bounds = context.keyShapeBounds[constraint.keyShapeID] else {
+            return
+        }
+
+        var updated = primitive.movingAnchor(to: bounds.center)
+        if primitive.radius != nil {
+            let radius = min(bounds.size.width, bounds.size.height) / 2
+                + constraint.overshoot
+            updated = updated.settingRadius(radius)
+        }
+        primitives[constraint.primitiveID] = updated
+    }
+
+    /// Holds two primitives a fixed distance apart, anchor to anchor.
+    ///
+    /// The pinned one stays; the other slides along the line joining them until
+    /// the gap is right. Coincident anchors have no line to slide along, so a
+    /// horizontal one is chosen rather than leaving the constraint unmet.
+    private static func applyFixedDistance(_ constraint: FixedDistanceConstraint,
+                                           to primitives: inout [PrimitiveID: IconPrimitive],
+                                           pinned: Set<PrimitiveID>) {
+        // Prefer to move the primitive the user is not holding. If they hold
+        // the one that would move, move the other instead so the constraint is
+        // still met without fighting the drag.
+        let movingID: PrimitiveID
+        let anchorID: PrimitiveID
+        if pinned.contains(constraint.primitiveID),
+           !pinned.contains(constraint.targetPrimitiveID) {
+            movingID = constraint.targetPrimitiveID
+            anchorID = constraint.primitiveID
+        } else {
+            movingID = constraint.primitiveID
+            anchorID = constraint.targetPrimitiveID
+        }
+
+        guard let moving = primitives[movingID],
+              let fixed = primitives[anchorID],
+              let movingCentre = moving.anchor,
+              let fixedCentre = fixed.anchor else {
+            return
+        }
+
+        let separation = fixedCentre.vector(to: movingCentre)
+        let direction = separation.normalized ?? IconVector(dx: 1, dy: 0)
+        let target = fixedCentre.offset(
+            by: direction.scaled(by: max(0, constraint.distance)))
+        primitives[movingID] = moving.movingAnchor(to: target)
+    }
+
+    /// Distributes three or more primitives evenly along an axis.
+    ///
+    /// The extremes stay put and the middle ones are spread between them at
+    /// equal centres. A pinned primitive is not moved off its position unless
+    /// it is one of the extremes, which define the span everything else fills.
+    private static func applyEqualSpacing(_ constraint: EqualSpacingConstraint,
+                                          to primitives: inout [PrimitiveID: IconPrimitive],
+                                          pinned: Set<PrimitiveID>) {
+        let members = constraint.primitiveIDs.compactMap { id in
+            primitives[id]?.anchor.map { (id: id, anchor: $0) }
+        }
+        guard members.count >= 3 else {
+            return
+        }
+
+        let horizontal = constraint.axis == .horizontal
+        func coordinate(_ point: IconPoint) -> Double {
+            horizontal ? point.x : point.y
+        }
+
+        let sorted = members.sorted { coordinate($0.anchor) < coordinate($1.anchor) }
+        guard let first = sorted.first, let last = sorted.last else {
+            return
+        }
+
+        let span = coordinate(last.anchor) - coordinate(first.anchor)
+        let step = span / Double(sorted.count - 1)
+
+        // Only the interior primitives move; the ends fix the span.
+        for (index, member) in sorted.enumerated()
+        where index != 0 && index != sorted.count - 1 {
+            guard let primitive = primitives[member.id] else {
+                continue
+            }
+            let target = coordinate(first.anchor) + step * Double(index)
+            let anchor = member.anchor
+            let moved = horizontal
+                ? IconPoint(x: target, y: anchor.y)
+                : IconPoint(x: anchor.x, y: target)
+            primitives[member.id] = primitive.movingAnchor(to: moved)
+        }
     }
 
     private static func applyOnGrid(_ constraint: OnGridConstraint,

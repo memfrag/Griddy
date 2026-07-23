@@ -85,6 +85,34 @@ extension IconPrimitive {
         return .line(line)
     }
 
+    /// The length of a primitive that has a natural one.
+    ///
+    /// A line's length is the distance between its ends. Nothing else reports
+    /// one: a circle's "length" would be ambiguous (diameter? circumference?),
+    /// and equal-length only ever relates lines.
+    public var length: Double? {
+        guard case .line(let line) = self else {
+            return nil
+        }
+        return line.length
+    }
+
+    /// A line rescaled about its midpoint to a new length, keeping direction.
+    ///
+    /// A no-op on anything that is not a line, and on a zero-length line, which
+    /// has no direction to preserve.
+    public func settingLength(_ newLength: Double) -> IconPrimitive {
+        guard case .line(var line) = self,
+              let unit = line.start.vector(to: line.end).normalized,
+              let anchor else {
+            return self
+        }
+        let half = max(0, newLength) / 2
+        line.start = anchor.offset(by: unit.scaled(by: -half))
+        line.end = anchor.offset(by: unit.scaled(by: half))
+        return .line(line)
+    }
+
     /// The primitive reflected across an axis.
     public func mirrored(across axis: SymmetryAxis, at position: Double) -> IconPrimitive {
         guard let anchor else {

@@ -107,6 +107,19 @@ struct ConstraintSection: View {
                 add(.onGrid(OnGridConstraint(primitiveID: primitive.id)))
             }
 
+            if !document.keyShapes.all.isEmpty {
+                Menu("On Key Shape") {
+                    ForEach(document.keyShapes.all) { keyShape in
+                        Button(keyShape.name) {
+                            add(.onKeyShape(OnKeyShapeConstraint(
+                                primitiveID: primitive.id,
+                                keyShapeID: keyShape.id,
+                                overshoot: 0)))
+                        }
+                    }
+                }
+            }
+
             // Relationships between two primitives need a second one selected,
             // so they are offered only when the selection makes them possible.
             if let partner = otherSelectedPrimitiveID {
@@ -132,9 +145,61 @@ struct ConstraintSection: View {
                     add(.tangent(TangentConstraint(primitiveID: primitive.id,
                                                    targetPrimitiveID: partner)))
                 }
+
+                // The distance seeds from where the two primitives are now, so
+                // adding the constraint holds them exactly where they sit
+                // rather than jumping them together.
+                Button("Fixed Distance") {
+                    add(.fixedDistance(FixedDistanceConstraint(
+                        primitiveID: primitive.id,
+                        targetPrimitiveID: partner,
+                        distance: currentDistance(to: partner))))
+                }
+
+                if bothAreLines(partner) {
+                    Button("Equal Length") {
+                        add(.equalLength(EqualLengthConstraint(
+                            primitiveIDs: [partner, primitive.id])))
+                    }
+                }
+            }
+
+            // Equal spacing needs three or more, distributed along an axis.
+            if allSelectedIDs.count >= 3 {
+                Divider()
+                Button("Equal Spacing (Horizontal)") {
+                    add(.equalSpacing(EqualSpacingConstraint(
+                        primitiveIDs: allSelectedIDs, axis: .horizontal)))
+                }
+                Button("Equal Spacing (Vertical)") {
+                    add(.equalSpacing(EqualSpacingConstraint(
+                        primitiveIDs: allSelectedIDs, axis: .vertical)))
+                }
             }
         }
         .menuStyle(.borderlessButton)
+    }
+
+    /// Every selected primitive, the inspected one first so it reads as the
+    /// subject of the relationship.
+    private var allSelectedIDs: [PrimitiveID] {
+        [primitive.id] + editor.selection.filter { $0 != primitive.id }
+    }
+
+    private func currentDistance(to partner: PrimitiveID) -> Double {
+        guard let a = primitive.anchor,
+              let b = document.primitive(withID: partner)?.anchor else {
+            return 1
+        }
+        return a.distance(to: b)
+    }
+
+    private func bothAreLines(_ partner: PrimitiveID) -> Bool {
+        if case .line = primitive,
+           case .line? = document.primitive(withID: partner) {
+            return true
+        }
+        return false
     }
 
     /// Another selected primitive to relate this one to, if there is exactly

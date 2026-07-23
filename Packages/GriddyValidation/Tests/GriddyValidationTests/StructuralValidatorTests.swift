@@ -109,40 +109,44 @@ private func onKeyShape() -> OnKeyShapeConstraint {
 @Suite("Unenforced constraints")
 struct UnenforcedConstraintTests {
 
-    @Test("The five unenforced kinds are known to be unenforced")
+    @Test("Only optical offset remains unenforced")
     func unenforcedKinds() {
-        // Mirrors the switch in ConstraintSolver.resolve that ignores them.
-        // If someone implements one, both must change together.
-        #expect(!Constraint.onKeyShape(onKeyShape()).isEnforced)
-        #expect(!Constraint.equalLength(EqualLengthConstraint(
-            primitiveIDs: [])).isEnforced)
-        #expect(!Constraint.equalSpacing(EqualSpacingConstraint(
-            primitiveIDs: [], axis: .horizontal)).isEnforced)
+        // Mirrors the switch in ConstraintSolver.resolve. If someone gives
+        // opticalOffset a resolution rule, both must change together.
+        #expect(!Constraint.opticalOffset(OpticalOffsetConstraint(
+            primitiveID: PrimitiveID(), offset: IconVector(dx: 1, dy: 1)))
+            .isEnforced)
 
-        // And the ones that do work still say so.
-        #expect(Constraint.centered(CenteredConstraint(
-            primitiveID: PrimitiveID(), axis: .horizontal)).isEnforced)
+        // The four that were unenforced now have real rules.
+        #expect(Constraint.onKeyShape(onKeyShape()).isEnforced)
+        #expect(Constraint.equalLength(EqualLengthConstraint(
+            primitiveIDs: [])).isEnforced)
+        #expect(Constraint.equalSpacing(EqualSpacingConstraint(
+            primitiveIDs: [], axis: .horizontal)).isEnforced)
+        #expect(Constraint.fixedDistance(FixedDistanceConstraint(
+            primitiveID: PrimitiveID(), targetPrimitiveID: PrimitiveID(),
+            distance: 1)).isEnforced)
     }
 
     @Test("A stored but unenforced constraint is reported")
     func reportsUnenforced() {
         var document = blankDocument()
-        document.constraints = [.onKeyShape(onKeyShape())]
+        document.constraints = [.opticalOffset(OpticalOffsetConstraint(
+            primitiveID: PrimitiveID(), offset: IconVector(dx: 1, dy: 0)))]
 
-        // The inspector adds these happily and they then move no geometry. A
-        // document that silently means less than it claims is worse than one
-        // that admits the gap.
+        // Optical offset is still recorded and displayed while moving no
+        // geometry, so the warning must still fire for it.
         let issues = StructuralValidator.unenforcedConstraints(in: document)
         #expect(issues.count == 1)
         #expect(issues.first?.severity == .warning)
         #expect(issues.first?.message.contains("not enforced") == true)
     }
 
-    @Test("An enforced constraint is not reported")
+    @Test("A now-enforced constraint is not reported")
     func silentOnEnforced() {
         var document = blankDocument()
-        document.constraints = [.centered(CenteredConstraint(
-            primitiveID: PrimitiveID(), axis: .horizontal))]
+        // On-key-shape was unenforced until this change; it must not warn now.
+        document.constraints = [.onKeyShape(onKeyShape())]
         #expect(StructuralValidator.unenforcedConstraints(in: document).isEmpty)
     }
 }

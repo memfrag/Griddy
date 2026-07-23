@@ -769,6 +769,10 @@ This design has three consequences worth stating plainly:
 2. Continuous constraint validation is unnecessary; §15.1's constraint category shrinks accordingly.
 3. Constraint resolution is deterministic and cheap, because it never searches for a solution — it only restricts or projects.
 
+**Enforcement status.** Twelve of the thirteen constraint kinds resolve: centering, on-grid, on-key-shape, concentric, equal-radius, equal-length, equal-spacing, fixed-distance, tangent, symmetric, parallel, perpendicular and fixed-angle. Each has a projection rule and snaps geometry on add.
+
+The one exception is **optical offset**, which is left unenforced by design rather than omission. An optical offset is a manual nudge away from where geometry alone would place a primitive, so it has no reference position to project back onto — re-applying it would require knowing the "un-nudged" location, which the document does not store. `Constraint.isEnforced` records this, next to the solver switch that skips it, and continuous validation (§15.1) warns when a document carries one so the gap is never silent. Implementing it would mean storing a base position alongside the offset, which is a model change, not a solver rule.
+
 ### 11.3 Constraint UI
 
 Constraints should be visible in the inspector and on canvas:

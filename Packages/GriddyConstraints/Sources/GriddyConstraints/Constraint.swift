@@ -87,11 +87,13 @@ public enum Constraint: Codable, Hashable, Sendable, Identifiable {
     /// implementing one of these updates this list and the solver together.
     public var isEnforced: Bool {
         switch self {
-        case .onKeyShape, .fixedDistance, .equalLength, .equalSpacing,
-             .opticalOffset:
+        case .opticalOffset:
+            // A manual nudge with no reference position to project back onto.
+            // See ConstraintSolver.apply.
             false
         case .onGrid, .centered, .equalRadius, .tangent, .concentric,
-             .symmetric, .parallel, .perpendicular, .fixedAngle:
+             .symmetric, .parallel, .perpendicular, .fixedAngle,
+             .onKeyShape, .fixedDistance, .equalLength, .equalSpacing:
             true
         }
     }
