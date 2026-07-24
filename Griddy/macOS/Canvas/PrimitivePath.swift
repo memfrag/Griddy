@@ -56,7 +56,8 @@ enum PrimitivePath {
                 // artwork does, not the straight chord between points.
                 addCenterline(Biarc.fit(through: polyline.points,
                                         closed: polyline.isClosed,
-                                        smoothness: polyline.pointSmoothness),
+                                        inSmoothness: polyline.resolvedInSmoothness,
+                                        outSmoothness: polyline.resolvedOutSmoothness),
                               to: &path, transform: transform)
             } else {
                 addPoints(polyline.points,

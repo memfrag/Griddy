@@ -20,19 +20,23 @@ public enum Biarc {
     /// line. A run of collinear points degenerates to lines rather than arcs of
     /// enormous radius.
     ///
-    /// - Parameter smoothness: per-point, 0 to 1. At 1 the curve flows smoothly
-    ///   through the point (a rounded corner); at 0 the point is sharp — its
-    ///   tangents fall onto the chords, so its arcs collapse to straight lines
-    ///   meeting at a kink. Values outside the array's range default to 1.
+    /// - Parameters:
+    ///   - inSmoothness: per-point smoothness for the *arriving* side, 0 to 1.
+    ///   - outSmoothness: per-point smoothness for the *leaving* side. Splitting
+    ///     the two is what makes a side independently sharp or round: at 1 that
+    ///     side flows smoothly, at 0 its tangent falls onto the chord and its
+    ///     arc collapses to a line into a kink. Missing values default to 1.
     public static func fit(through points: [IconPoint],
                            closed: Bool,
-                           smoothness: [Double] = []) -> [OutlineSegment] {
+                           inSmoothness: [Double] = [],
+                           outSmoothness: [Double] = []) -> [OutlineSegment] {
         guard points.count >= 2 else {
             return []
         }
 
         let (outgoing, incoming) = tangents(points, closed: closed,
-                                            smoothness: smoothness)
+                                            inSmoothness: inSmoothness,
+                                            outSmoothness: outSmoothness)
 
         var segments: [OutlineSegment] = []
         let pairCount = closed ? points.count : points.count - 1
@@ -44,6 +48,14 @@ public enum Biarc {
         return segments
     }
 
+    /// Convenience for a symmetric smoothness applied to both sides.
+    public static func fit(through points: [IconPoint],
+                           closed: Bool,
+                           smoothness: [Double]) -> [OutlineSegment] {
+        fit(through: points, closed: closed,
+            inSmoothness: smoothness, outSmoothness: smoothness)
+    }
+
     // MARK: Tangents
 
     /// The tangent leaving each point and the tangent arriving at it.
@@ -51,14 +63,16 @@ public enum Biarc {
     /// Smooth points share one tangent (Catmull-Rom, so the join is continuous);
     /// a sharp point instead aims each side straight at its neighbour, and the
     /// smoothness blends between the two. Splitting into leaving/arriving is what
-    /// lets a single point be a corner: its two sides then point different ways.
+    /// lets a single point be a corner, or be round on one side and sharp on the
+    /// other: its two sides then point different ways.
     static func tangents(_ points: [IconPoint],
                          closed: Bool,
-                         smoothness: [Double]) -> (out: [IconVector], in: [IconVector]) {
+                         inSmoothness: [Double],
+                         outSmoothness: [Double]) -> (out: [IconVector], in: [IconVector]) {
         let count = points.count
-        func smooth(_ index: Int) -> Double {
-            guard index >= 0, index < smoothness.count else { return 1 }
-            return min(1, max(0, smoothness[index]))
+        func clamp(_ array: [Double], _ index: Int) -> Double {
+            guard index >= 0, index < array.count else { return 1 }
+            return min(1, max(0, array[index]))
         }
         func lerp(_ a: IconVector, _ b: IconVector, _ t: Double) -> IconVector {
             IconVector(dx: a.dx + (b.dx - a.dx) * t, dy: a.dy + (b.dy - a.dy) * t)
@@ -85,9 +99,10 @@ public enum Biarc {
                 } ?? fp
             } ?? toNext) ?? fallback
 
-            let s = smooth(index)
-            outgoing[index] = (lerp(toNext ?? catmull, catmull, s).normalized) ?? catmull
-            incoming[index] = (lerp(fromPrev ?? catmull, catmull, s).normalized) ?? catmull
+            let outS = clamp(outSmoothness, index)
+            let inS = clamp(inSmoothness, index)
+            outgoing[index] = (lerp(toNext ?? catmull, catmull, outS).normalized) ?? catmull
+            incoming[index] = (lerp(fromPrev ?? catmull, catmull, inS).normalized) ?? catmull
         }
         return (outgoing, incoming)
     }

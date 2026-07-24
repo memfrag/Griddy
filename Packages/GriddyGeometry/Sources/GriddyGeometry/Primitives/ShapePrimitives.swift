@@ -154,43 +154,86 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
     /// machinery for selection, handles and editing. See ``Biarc`` and §10.5.
     public var isSmooth: Bool
 
-    /// Per-point smoothness, 0 (sharp corner) to 1 (fully round), parallel to
-    /// ``points``. Only meaningful when ``isSmooth``. Empty or short means the
-    /// missing points are fully round.
+    /// Per-point smoothness of the *arriving* side, 0 (sharp) to 1 (round),
+    /// parallel to ``points``. Also the symmetric value: the leaving side
+    /// follows it unless ``pointSmoothnessOut`` overrides. Only meaningful when
+    /// ``isSmooth``; empty or short means fully round.
     public var pointSmoothness: [Double]
+
+    /// Per-point smoothness of the *leaving* side. When empty or short, that
+    /// side follows ``pointSmoothness`` — a symmetric point. A value here makes
+    /// the point round on one side and sharp on the other.
+    public var pointSmoothnessOut: [Double]
 
     public init(id: PrimitiveID = PrimitiveID(),
                 attributes: PrimitiveAttributes = .default,
                 points: [IconPoint],
                 isClosed: Bool = false,
                 isSmooth: Bool = false,
-                pointSmoothness: [Double] = []) {
+                pointSmoothness: [Double] = [],
+                pointSmoothnessOut: [Double] = []) {
         self.id = id
         self.attributes = attributes
         self.points = points
         self.isClosed = isClosed
         self.isSmooth = isSmooth
         self.pointSmoothness = pointSmoothness
+        self.pointSmoothnessOut = pointSmoothnessOut
     }
 
-    /// The smoothness of one point, defaulting to fully round.
+    /// The arriving-side smoothness of one point, defaulting to fully round.
     public func smoothness(at index: Int) -> Double {
         guard index >= 0, index < pointSmoothness.count else { return 1 }
         return pointSmoothness[index]
     }
 
-    /// Sets one point's smoothness, growing the array to fit if needed.
-    public mutating func setSmoothness(_ value: Double, at index: Int) {
-        guard points.indices.contains(index) else { return }
-        if pointSmoothness.count < points.count {
-            pointSmoothness += Array(repeating: 1,
-                                     count: points.count - pointSmoothness.count)
+    /// The leaving-side smoothness, falling back to the arriving side so an
+    /// un-split point stays symmetric.
+    public func smoothnessOut(at index: Int) -> Double {
+        guard index >= 0, index < pointSmoothnessOut.count else {
+            return smoothness(at: index)
         }
-        pointSmoothness[index] = min(1, max(0, value))
+        return pointSmoothnessOut[index]
+    }
+
+    /// Whether a point's two sides are set independently.
+    public func isPerSide(at index: Int) -> Bool {
+        index >= 0 && index < pointSmoothnessOut.count
+            && abs(pointSmoothnessOut[index] - smoothness(at: index)) > 1e-9
+    }
+
+    public var resolvedInSmoothness: [Double] {
+        points.indices.map { smoothness(at: $0) }
+    }
+
+    public var resolvedOutSmoothness: [Double] {
+        points.indices.map { smoothnessOut(at: $0) }
+    }
+
+    /// Sets both sides of a point to one value (symmetric).
+    public mutating func setSmoothness(_ value: Double, at index: Int) {
+        setSmoothness(in: value, out: value, at: index)
+    }
+
+    /// Sets a point's two sides independently.
+    public mutating func setSmoothness(in inValue: Double, out outValue: Double,
+                                       at index: Int) {
+        let count = points.count
+        guard index >= 0, index < count else { return }
+        if pointSmoothness.count < count {
+            pointSmoothness += Array(repeating: 1, count: count - pointSmoothness.count)
+        }
+        if pointSmoothnessOut.count < count {
+            pointSmoothnessOut += Array(repeating: 1,
+                                        count: count - pointSmoothnessOut.count)
+        }
+        pointSmoothness[index] = min(1, max(0, inValue))
+        pointSmoothnessOut[index] = min(1, max(0, outValue))
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, attributes, points, isClosed, isSmooth, pointSmoothness
+        case id, attributes, points, isClosed, isSmooth
+        case pointSmoothness, pointSmoothnessOut
     }
 
     /// Decodes polylines written before the smooth flag, which are straight.
@@ -203,6 +246,8 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
         isSmooth = try container.decodeIfPresent(Bool.self, forKey: .isSmooth) ?? false
         pointSmoothness = try container.decodeIfPresent(
             [Double].self, forKey: .pointSmoothness) ?? []
+        pointSmoothnessOut = try container.decodeIfPresent(
+            [Double].self, forKey: .pointSmoothnessOut) ?? []
     }
 }
 

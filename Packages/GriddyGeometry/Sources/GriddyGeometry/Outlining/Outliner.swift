@@ -62,7 +62,8 @@ public enum Outliner {
             return outlinePolyline(points: polyline.points,
                                    isClosed: polyline.isClosed,
                                    isSmooth: polyline.isSmooth,
-                                   smoothness: polyline.pointSmoothness,
+                                   inSmoothness: polyline.resolvedInSmoothness,
+                                   outSmoothness: polyline.resolvedOutSmoothness,
                                    width: width,
                                    cap: stroke.lineCap)
 
@@ -416,7 +417,8 @@ public enum Outliner {
     public static func outlinePolyline(points: [IconPoint],
                                        isClosed: Bool,
                                        isSmooth: Bool = false,
-                                       smoothness: [Double] = [],
+                                       inSmoothness: [Double] = [],
+                                       outSmoothness: [Double] = [],
                                        width: Double,
                                        cap: LineCap) -> OutlinePath {
         let radius = width / 2
@@ -429,7 +431,8 @@ public enum Outliner {
 
         return isSmooth
             ? outlineSmoothPath(points: points, isClosed: isClosed,
-                                smoothness: smoothness, width: width, cap: cap)
+                                inSmoothness: inSmoothness,
+                                outSmoothness: outSmoothness, width: width, cap: cap)
             : outlineStraightPath(points: points, isClosed: isClosed,
                                   width: width, cap: cap)
     }
@@ -478,12 +481,14 @@ public enum Outliner {
     /// the straight polyline relies on it.
     private static func outlineSmoothPath(points: [IconPoint],
                                           isClosed: Bool,
-                                          smoothness: [Double],
+                                          inSmoothness: [Double],
+                                          outSmoothness: [Double],
                                           width: Double,
                                           cap: LineCap) -> OutlinePath {
         let radius = width / 2
         let centerline = Biarc.fit(through: points, closed: isClosed,
-                                   smoothness: smoothness)
+                                   inSmoothness: inSmoothness,
+                                   outSmoothness: outSmoothness)
         guard !centerline.isEmpty else {
             return outlineStraightPath(points: points, isClosed: isClosed,
                                        width: width, cap: cap)
