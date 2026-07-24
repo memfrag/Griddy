@@ -115,6 +115,13 @@ public enum Biarc {
         // The second arc runs from the joint to p1, tangent t1 at p1. Build it
         // from p1 backwards and reverse, so the tangent condition is at p1.
         let second = arc(from: p1, tangent: t1.scaled(by: -1), to: joint).reversed
+
+        // A sharp segment (both tangents on the chord) collapses to two
+        // collinear lines through the joint; merge them into one so a
+        // straight-cornered path carries no redundant midpoints.
+        if case .line = first, case .line = second, collinear(p0, joint, p1) {
+            return [.line(from: p0, to: p1)]
+        }
         return [first, second]
     }
 
@@ -158,5 +165,15 @@ public enum Biarc {
 
     private static func angle(from center: IconPoint, to point: IconPoint) -> IconAngle {
         IconAngle(radians: atan2(point.y - center.y, point.x - center.x))
+    }
+
+    /// Whether three points lie on one line, with `b` between `a` and `c`.
+    private static func collinear(_ a: IconPoint, _ b: IconPoint,
+                                  _ c: IconPoint) -> Bool {
+        let ab = a.vector(to: b)
+        let bc = b.vector(to: c)
+        let cross = ab.dx * bc.dy - ab.dy * bc.dx
+        let dot = ab.dx * bc.dx + ab.dy * bc.dy
+        return abs(cross) < 1e-9 && dot > 0
     }
 }

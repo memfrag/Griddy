@@ -387,10 +387,18 @@ struct SymbolCanvasView: View {
             return
         }
 
+        // Both tools make a per-point path. The pen starts every point sharp,
+        // the curve starts every point round; either way any point can be
+        // toggled afterwards. A fully sharp path outlines to straight segments
+        // (the biarc merges collinear pieces), so a pen path is as clean as a
+        // plain polyline.
         let smooth = editor.tool.makesSmoothPath
+        let defaultSmoothness = smooth ? 1.0 : 0.0
         let primitive = IconPrimitive.polyline(
             PolylinePrimitive(points: editor.pathPoints,
-                              isClosed: closed, isSmooth: smooth))
+                              isClosed: closed, isSmooth: true,
+                              pointSmoothness: Array(repeating: defaultSmoothness,
+                                                     count: editor.pathPoints.count)))
 
         let name = smooth ? "Add Curve" : (closed ? "Add Closed Path" : "Add Path")
         let snapshot = file.beginGesture()
