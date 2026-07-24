@@ -685,6 +685,8 @@ Outlines are expressed in exact arcs and Béziers. Curve fidelity is preserved a
 
 Because a smooth path is just a polyline with a flag, it reuses all the polyline machinery — selection, vertex handles, translation, per-master adjustment — and only its outlining differs. The pen tool makes the straight version; the curve tool makes the smooth one.
 
+**Per-point corners.** Each point of a smooth path carries a *smoothness* from 0 to 1 (`pointSmoothness`). At 1 the curve flows through it as a rounded corner (the default); at 0 the point is sharp, because its tangents fall onto the chords and its two arcs collapse to straight lines meeting at a kink; in between it eases. So one path can round some corners and sharpen others without changing tools. Option-clicking a vertex toggles it between rounded and sharp, and a rounded vertex is drawn as a round handle, a sharp one as a square, so the corners are visible at a glance.
+
 **Boolean resolution follows outlining.** Overlapping outlines are combined by a real curve-curve boolean solver, producing minimal, non-overlapping outlines that match what a designer would hand-author. The solver:
 
 1. Computes curve-curve intersections between outline segments.

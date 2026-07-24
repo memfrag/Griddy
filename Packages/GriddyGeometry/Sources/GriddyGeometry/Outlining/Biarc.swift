@@ -19,54 +19,77 @@ public enum Biarc {
     /// Fewer than two points has no curve. Two points with no bend is a single
     /// line. A run of collinear points degenerates to lines rather than arcs of
     /// enormous radius.
+    ///
+    /// - Parameter smoothness: per-point, 0 to 1. At 1 the curve flows smoothly
+    ///   through the point (a rounded corner); at 0 the point is sharp — its
+    ///   tangents fall onto the chords, so its arcs collapse to straight lines
+    ///   meeting at a kink. Values outside the array's range default to 1.
     public static func fit(through points: [IconPoint],
-                           closed: Bool) -> [OutlineSegment] {
+                           closed: Bool,
+                           smoothness: [Double] = []) -> [OutlineSegment] {
         guard points.count >= 2 else {
             return []
         }
 
-        let tangents = estimateTangents(points, closed: closed)
+        let (outgoing, incoming) = tangents(points, closed: closed,
+                                            smoothness: smoothness)
 
         var segments: [OutlineSegment] = []
         let pairCount = closed ? points.count : points.count - 1
         for index in 0..<pairCount {
             let next = (index + 1) % points.count
-            segments.append(contentsOf: biarc(points[index], tangents[index],
-                                              points[next], tangents[next]))
+            segments.append(contentsOf: biarc(points[index], outgoing[index],
+                                              points[next], incoming[next]))
         }
         return segments
     }
 
     // MARK: Tangents
 
-    /// A unit tangent at each point, estimated from its neighbours.
+    /// The tangent leaving each point and the tangent arriving at it.
     ///
-    /// An interior point points along the line joining its neighbours
-    /// (Catmull-Rom style), which is what makes the tangent continuous across
-    /// the point and so the whole spline smooth. Open endpoints aim at their one
-    /// neighbour.
-    static func estimateTangents(_ points: [IconPoint],
-                                 closed: Bool) -> [IconVector] {
+    /// Smooth points share one tangent (Catmull-Rom, so the join is continuous);
+    /// a sharp point instead aims each side straight at its neighbour, and the
+    /// smoothness blends between the two. Splitting into leaving/arriving is what
+    /// lets a single point be a corner: its two sides then point different ways.
+    static func tangents(_ points: [IconPoint],
+                         closed: Bool,
+                         smoothness: [Double]) -> (out: [IconVector], in: [IconVector]) {
         let count = points.count
-        return points.indices.map { index in
-            let previous: IconPoint
-            let next: IconPoint
-            if closed {
-                previous = points[(index - 1 + count) % count]
-                next = points[(index + 1) % count]
-            } else if index == 0 {
-                previous = points[0]
-                next = points[1]
-            } else if index == count - 1 {
-                previous = points[count - 2]
-                next = points[count - 1]
-            } else {
-                previous = points[index - 1]
-                next = points[index + 1]
-            }
-            return previous.vector(to: next).normalized
-                ?? IconVector(dx: 1, dy: 0)
+        func smooth(_ index: Int) -> Double {
+            guard index >= 0, index < smoothness.count else { return 1 }
+            return min(1, max(0, smoothness[index]))
         }
+        func lerp(_ a: IconVector, _ b: IconVector, _ t: Double) -> IconVector {
+            IconVector(dx: a.dx + (b.dx - a.dx) * t, dy: a.dy + (b.dy - a.dy) * t)
+        }
+        let fallback = IconVector(dx: 1, dy: 0)
+
+        var outgoing = [IconVector](repeating: fallback, count: count)
+        var incoming = [IconVector](repeating: fallback, count: count)
+
+        for index in 0..<count {
+            let hasPrev = closed || index > 0
+            let hasNext = closed || index < count - 1
+            let prev = points[(index - 1 + count) % count]
+            let next = points[(index + 1) % count]
+
+            let toNext = hasNext ? points[index].vector(to: next).normalized : nil
+            let fromPrev = hasPrev ? prev.vector(to: points[index]).normalized : nil
+
+            // The smooth tangent runs neighbour to neighbour; at an open end it
+            // is whatever single chord exists.
+            let catmull = (fromPrev.map { fp in
+                toNext.map { tn in
+                    IconVector(dx: fp.dx + tn.dx, dy: fp.dy + tn.dy).normalized
+                } ?? fp
+            } ?? toNext) ?? fallback
+
+            let s = smooth(index)
+            outgoing[index] = (lerp(toNext ?? catmull, catmull, s).normalized) ?? catmull
+            incoming[index] = (lerp(fromPrev ?? catmull, catmull, s).normalized) ?? catmull
+        }
+        return (outgoing, incoming)
     }
 
     // MARK: Biarc

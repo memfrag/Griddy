@@ -55,7 +55,8 @@ enum PrimitivePath {
                 // The selection outline should follow the same biarc curve the
                 // artwork does, not the straight chord between points.
                 addCenterline(Biarc.fit(through: polyline.points,
-                                        closed: polyline.isClosed),
+                                        closed: polyline.isClosed,
+                                        smoothness: polyline.pointSmoothness),
                               to: &path, transform: transform)
             } else {
                 addPoints(polyline.points,

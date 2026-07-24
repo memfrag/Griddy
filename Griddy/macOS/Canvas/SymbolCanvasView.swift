@@ -284,6 +284,15 @@ struct SymbolCanvasView: View {
         // starting a move. Handles are only live for a single selection —
         // reshaping several primitives at once has no obvious meaning.
         if let grabbed = handleUnderCursor(at: raw) {
+            // Option-clicking a smooth-curve vertex toggles it between a rounded
+            // point and a sharp corner, rather than starting a reshape.
+            if NSEvent.modifierFlags.contains(.option),
+               case .vertex(let index) = grabbed.handle,
+               isSmoothVertex(grabbed.id) {
+                toggleCorner(grabbed.id, at: index)
+                editor.drag = .inert
+                return
+            }
             editor.drag = .reshaping(primitiveID: grabbed.id,
                                      handle: grabbed.handle,
                                      start: point, current: point)
@@ -327,6 +336,27 @@ struct SymbolCanvasView: View {
                 editor.selection = []
             }
             editor.drag = .marquee(start: point, current: point)
+        }
+    }
+
+    // MARK: Curve corners
+
+    private func isSmoothVertex(_ id: PrimitiveID) -> Bool {
+        if case .polyline(let polyline)? = document.primitive(withID: id) {
+            return polyline.isSmooth
+        }
+        return false
+    }
+
+    /// Flips a smooth-curve point between rounded and sharp.
+    private func toggleCorner(_ id: PrimitiveID, at index: Int) {
+        file.perform("Toggle Corner", undoManager: undoManager) { document in
+            guard case .polyline(var polyline)? = document.primitive(withID: id) else {
+                return
+            }
+            let rounded = polyline.smoothness(at: index) > 0.5
+            polyline.setSmoothness(rounded ? 0 : 1, at: index)
+            document.replacePrimitive(.polyline(polyline))
         }
     }
 

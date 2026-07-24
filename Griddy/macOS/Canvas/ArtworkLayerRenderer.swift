@@ -167,8 +167,9 @@ struct ArtworkLayerRenderer {
     private func drawHandles(for primitive: IconPrimitive,
                              in context: inout GraphicsContext) {
         // The same semantic handles the gesture layer drags, so what is drawn
-        // and what is grabbable can never drift apart. A corner-radius handle
-        // is drawn round to read differently from the square resize handles.
+        // and what is grabbable can never drift apart. A corner-radius handle is
+        // round, and a smooth-curve vertex is round while a sharp one is square,
+        // so a glance shows which points are corners.
         for handle in primitive.handles {
             let center = transform.point(handle.position)
             let size: CGFloat = 5
@@ -176,7 +177,7 @@ struct ArtworkLayerRenderer {
                               y: center.y - size / 2,
                               width: size,
                               height: size)
-            let shape = handle.handle == .cornerRadius
+            let shape = isRoundHandle(handle.handle, of: primitive)
                 ? Path(ellipseIn: rect) : Path(rect)
             context.fill(shape, with: .color(.handleFill))
             context.stroke(shape, with: .color(.selection), lineWidth: 1)
@@ -193,6 +194,21 @@ struct ArtworkLayerRenderer {
                 context.stroke(Path(rect), with: .color(.selection), lineWidth: 1)
             }
         }
+    }
+
+    /// Whether a handle is drawn round: the corner-radius handle always, and a
+    /// smooth-curve vertex when that point is rounded rather than a corner.
+    private func isRoundHandle(_ handle: PrimitiveHandle,
+                               of primitive: IconPrimitive) -> Bool {
+        if handle == .cornerRadius {
+            return true
+        }
+        if case .vertex(let index) = handle,
+           case .polyline(let polyline) = primitive,
+           polyline.isSmooth {
+            return polyline.smoothness(at: index) > 0.5
+        }
+        return false
     }
 
     private func corners(of rect: IconRect) -> [IconPoint] {

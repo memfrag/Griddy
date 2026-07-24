@@ -154,20 +154,43 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
     /// machinery for selection, handles and editing. See ``Biarc`` and §10.5.
     public var isSmooth: Bool
 
+    /// Per-point smoothness, 0 (sharp corner) to 1 (fully round), parallel to
+    /// ``points``. Only meaningful when ``isSmooth``. Empty or short means the
+    /// missing points are fully round.
+    public var pointSmoothness: [Double]
+
     public init(id: PrimitiveID = PrimitiveID(),
                 attributes: PrimitiveAttributes = .default,
                 points: [IconPoint],
                 isClosed: Bool = false,
-                isSmooth: Bool = false) {
+                isSmooth: Bool = false,
+                pointSmoothness: [Double] = []) {
         self.id = id
         self.attributes = attributes
         self.points = points
         self.isClosed = isClosed
         self.isSmooth = isSmooth
+        self.pointSmoothness = pointSmoothness
+    }
+
+    /// The smoothness of one point, defaulting to fully round.
+    public func smoothness(at index: Int) -> Double {
+        guard index >= 0, index < pointSmoothness.count else { return 1 }
+        return pointSmoothness[index]
+    }
+
+    /// Sets one point's smoothness, growing the array to fit if needed.
+    public mutating func setSmoothness(_ value: Double, at index: Int) {
+        guard points.indices.contains(index) else { return }
+        if pointSmoothness.count < points.count {
+            pointSmoothness += Array(repeating: 1,
+                                     count: points.count - pointSmoothness.count)
+        }
+        pointSmoothness[index] = min(1, max(0, value))
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, attributes, points, isClosed, isSmooth
+        case id, attributes, points, isClosed, isSmooth, pointSmoothness
     }
 
     /// Decodes polylines written before the smooth flag, which are straight.
@@ -178,6 +201,8 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
         points = try container.decode([IconPoint].self, forKey: .points)
         isClosed = try container.decode(Bool.self, forKey: .isClosed)
         isSmooth = try container.decodeIfPresent(Bool.self, forKey: .isSmooth) ?? false
+        pointSmoothness = try container.decodeIfPresent(
+            [Double].self, forKey: .pointSmoothness) ?? []
     }
 }
 
