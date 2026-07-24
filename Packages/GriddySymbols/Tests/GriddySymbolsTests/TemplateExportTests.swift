@@ -678,3 +678,37 @@ struct BooleanExportProbe {
         _ = report
     }
 }
+
+@Suite("Smooth path export")
+struct SmoothPathExportProbe {
+
+    @Test("A smooth curve exports and reimports interpolatably")
+    func smoothCurveExports() throws {
+        var package = try drawnDocument()
+        package.document.primitives = []
+        package.document.layers = [SymbolLayer(name: "Body", role: .outerBody)]
+
+        let centre = package.document.coordinateSystem.capHeightBox.center
+        package.document.addPrimitive(.polyline(PolylinePrimitive(
+            points: [IconPoint(x: centre.x - 6, y: centre.y),
+                     IconPoint(x: centre.x, y: centre.y + 5),
+                     IconPoint(x: centre.x + 6, y: centre.y)],
+            isClosed: false, isSmooth: true)))
+
+        let (data, _) = try SFSymbolTemplateExporter.export(
+            document: package.document, sourceTemplate: package.sourceTemplate)
+        let reimported = try SFSymbolTemplateImporter.import(data)
+
+        func kinds(_ w: SymbolWeight) -> [String] {
+            (reimported.variants[SymbolSlot(weight: w, scale: .small)]?
+                .commands ?? []).map { c in
+                switch c {
+                case .move: "M"; case .line: "L"; case .cubic: "C"; case .close: "Z"
+                }
+            }
+        }
+        #expect(!kinds(.regular).isEmpty)
+        #expect(kinds(.ultralight) == kinds(.regular))
+        #expect(kinds(.black) == kinds(.regular))
+    }
+}

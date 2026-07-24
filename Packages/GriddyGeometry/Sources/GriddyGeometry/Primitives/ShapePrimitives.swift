@@ -148,14 +148,36 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
     public var points: [IconPoint]
     public var isClosed: Bool
 
+    /// Whether the points are joined by a smooth biarc spline rather than
+    /// straight segments. The points are the same either way — only the curve
+    /// between them differs — so a smooth path reuses all the polyline
+    /// machinery for selection, handles and editing. See ``Biarc`` and §10.5.
+    public var isSmooth: Bool
+
     public init(id: PrimitiveID = PrimitiveID(),
                 attributes: PrimitiveAttributes = .default,
                 points: [IconPoint],
-                isClosed: Bool = false) {
+                isClosed: Bool = false,
+                isSmooth: Bool = false) {
         self.id = id
         self.attributes = attributes
         self.points = points
         self.isClosed = isClosed
+        self.isSmooth = isSmooth
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, attributes, points, isClosed, isSmooth
+    }
+
+    /// Decodes polylines written before the smooth flag, which are straight.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(PrimitiveID.self, forKey: .id)
+        attributes = try container.decode(PrimitiveAttributes.self, forKey: .attributes)
+        points = try container.decode([IconPoint].self, forKey: .points)
+        isClosed = try container.decode(Bool.self, forKey: .isClosed)
+        isSmooth = try container.decodeIfPresent(Bool.self, forKey: .isSmooth) ?? false
     }
 }
 

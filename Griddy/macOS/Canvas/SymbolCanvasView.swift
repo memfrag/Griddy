@@ -357,17 +357,18 @@ struct SymbolCanvasView: View {
             return
         }
 
+        let smooth = editor.tool.makesSmoothPath
         let primitive = IconPrimitive.polyline(
-            PolylinePrimitive(points: editor.pathPoints, isClosed: closed))
+            PolylinePrimitive(points: editor.pathPoints,
+                              isClosed: closed, isSmooth: smooth))
 
+        let name = smooth ? "Add Curve" : (closed ? "Add Closed Path" : "Add Path")
         let snapshot = file.beginGesture()
         file.updateWithoutUndo { document in
             document.addPrimitive(primitive)
         }
         editor.selectOnly(primitive.id)
-        file.commitGesture("Add \(closed ? "Closed Path" : "Path")",
-                           from: snapshot,
-                           undoManager: undoManager)
+        file.commitGesture(name, from: snapshot, undoManager: undoManager)
     }
 
     /// The handle of the single selected primitive nearest the cursor, if one

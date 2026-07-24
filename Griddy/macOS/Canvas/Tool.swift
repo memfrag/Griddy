@@ -18,6 +18,7 @@ enum Tool: String, CaseIterable, Identifiable {
     case roundedRect
     case capsule
     case pen
+    case curve
 
     var id: Self { self }
 
@@ -30,6 +31,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .roundedRect: "Rounded Rectangle"
         case .capsule: "Capsule"
         case .pen: "Pen"
+        case .curve: "Curve"
         }
     }
 
@@ -42,6 +44,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .roundedRect: "rectangle.roundedtop"
         case .capsule: "capsule"
         case .pen: "point.topleft.down.to.point.bottomright.curvepath"
+        case .curve: "scribble.variable"
         }
     }
 
@@ -54,6 +57,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .roundedRect: "r"
         case .capsule: "c"
         case .pen: "p"
+        case .curve: "b"
         }
     }
 
@@ -65,7 +69,13 @@ enum Tool: String, CaseIterable, Identifiable {
     /// Whether this tool builds a path from a series of clicks rather than a
     /// single drag. Path tools share one point-collecting interaction.
     var isPathTool: Bool {
-        self == .pen
+        self == .pen || self == .curve
+    }
+
+    /// Whether a path tool joins its points with a smooth biarc spline rather
+    /// than straight segments.
+    var makesSmoothPath: Bool {
+        self == .curve
     }
 
     /// Builds a primitive from a drag.
@@ -124,8 +134,8 @@ enum Tool: String, CaseIterable, Identifiable {
             }
             return .capsule(CapsulePrimitive(bounds: bounds))
 
-        case .pen:
-            // The pen does not build from a single drag; it collects clicks.
+        case .pen, .curve:
+            // Path tools do not build from a single drag; they collect clicks.
             return nil
         }
     }

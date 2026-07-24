@@ -61,6 +61,7 @@ public enum Outliner {
         case .polyline(let polyline):
             return outlinePolyline(points: polyline.points,
                                    isClosed: polyline.isClosed,
+                                   isSmooth: polyline.isSmooth,
                                    width: width,
                                    cap: stroke.lineCap)
 
@@ -413,6 +414,7 @@ public enum Outliner {
     /// letting the solver do the work keeps this correct for any input.
     public static func outlinePolyline(points: [IconPoint],
                                        isClosed: Bool,
+                                       isSmooth: Bool = false,
                                        width: Double,
                                        cap: LineCap) -> OutlinePath {
         let radius = width / 2
@@ -423,6 +425,18 @@ public enum Outliner {
             return .empty
         }
 
+        return isSmooth
+            ? outlineSmoothPath(points: points, isClosed: isClosed,
+                                width: width, cap: cap)
+            : outlineStraightPath(points: points, isClosed: isClosed,
+                                  width: width, cap: cap)
+    }
+
+    private static func outlineStraightPath(points: [IconPoint],
+                                            isClosed: Bool,
+                                            width: Double,
+                                            cap: LineCap) -> OutlinePath {
+        let radius = width / 2
         var contours: [OutlineContour] = []
 
         var pairs: [(IconPoint, IconPoint)] = []
@@ -451,5 +465,59 @@ public enum Outliner {
         }
 
         return OutlinePath(contours: contours)
+    }
+
+    /// Strokes a biarc spline through the points.
+    ///
+    /// The centerline is a chain of arcs and lines (``Biarc``); each is stroked
+    /// like its lone-primitive counterpart, and a disc at every junction fills
+    /// the joins. Every piece and every join overlaps its neighbours, which the
+    /// union in `resolvedOutline` resolves into one clean outline — the same way
+    /// the straight polyline relies on it.
+    private static func outlineSmoothPath(points: [IconPoint],
+                                          isClosed: Bool,
+                                          width: Double,
+                                          cap: LineCap) -> OutlinePath {
+        let radius = width / 2
+        let centerline = Biarc.fit(through: points, closed: isClosed)
+        guard !centerline.isEmpty else {
+            return outlineStraightPath(points: points, isClosed: isClosed,
+                                       width: width, cap: cap)
+        }
+
+        var contours: [OutlineContour] = []
+
+        for piece in centerline {
+            switch piece {
+            case .line(let from, let to):
+                contours.append(contentsOf:
+                    outlineSegment(from: from, to: to, width: width, cap: cap).contours)
+            case .arc(let arc):
+                contours.append(contentsOf: strokeCenterlineArc(arc, width: width,
+                                                                cap: cap).contours)
+            }
+        }
+
+        // A disc at every junction between pieces. The two extreme ends of an
+        // open path are left to their caps; a closed path has no ends.
+        let junctionCount = isClosed ? centerline.count : centerline.count - 1
+        for index in 0..<junctionCount {
+            contours.append(contentsOf:
+                outlineDisc(center: centerline[index].end, radius: radius).contours)
+        }
+
+        return OutlinePath(contours: contours)
+    }
+
+    /// Strokes a single centerline arc as a curved band.
+    private static func strokeCenterlineArc(_ arc: ArcSegment,
+                                            width: Double,
+                                            cap: LineCap) -> OutlinePath {
+        outlineArc(ArcPrimitive(center: arc.center,
+                                radius: arc.radius,
+                                startAngle: arc.startAngle,
+                                endAngle: arc.endAngle,
+                                isClockwise: arc.isClockwise),
+                   width: width, cap: cap)
     }
 }

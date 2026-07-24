@@ -51,10 +51,18 @@ enum PrimitivePath {
             )
 
         case .polyline(let polyline):
-            addPoints(polyline.points,
-                      isClosed: polyline.isClosed,
-                      to: &path,
-                      transform: transform)
+            if polyline.isSmooth {
+                // The selection outline should follow the same biarc curve the
+                // artwork does, not the straight chord between points.
+                addCenterline(Biarc.fit(through: polyline.points,
+                                        closed: polyline.isClosed),
+                              to: &path, transform: transform)
+            } else {
+                addPoints(polyline.points,
+                          isClosed: polyline.isClosed,
+                          to: &path,
+                          transform: transform)
+            }
 
         case .symmetricPath(let symmetric):
             addPoints(symmetric.points + symmetric.mirroredPoints,
@@ -85,6 +93,29 @@ enum PrimitivePath {
             endAngle: .radians(-arc.endAngle.radians),
             clockwise: !arc.isClockwise
         )
+    }
+
+    /// Draws a biarc centerline (arcs and lines) without closing it.
+    private static func addCenterline(_ segments: [OutlineSegment],
+                                      to path: inout Path,
+                                      transform: CanvasTransform) {
+        guard let first = segments.first else {
+            return
+        }
+        path.move(to: transform.point(first.start))
+        for segment in segments {
+            switch segment {
+            case .line(_, let to):
+                path.addLine(to: transform.point(to))
+            case .arc(let arc):
+                path.addArc(
+                    center: transform.point(arc.center),
+                    radius: transform.length(arc.radius),
+                    startAngle: .radians(-arc.startAngle.radians),
+                    endAngle: .radians(-arc.endAngle.radians),
+                    clockwise: !arc.isClockwise)
+            }
+        }
     }
 
     private static func addPoints(_ points: [IconPoint],

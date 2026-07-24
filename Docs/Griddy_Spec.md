@@ -676,9 +676,14 @@ This section describes the single most important piece of geometry in Griddy, an
 | Rounded rect | Two nested rounded rectangles, inner reverse-wound |
 | Capsule | Two nested capsules, inner reverse-wound |
 | Polyline | Offset chain with join geometry at each vertex, caps at each end |
+| Smooth path (curve) | Biarc spline through the points, each arc stroked, discs at the joins |
 | Symmetric path | Outline the source half, then mirror across the axis |
 
 Outlines are expressed in exact arcs and Béziers. Curve fidelity is preserved all the way to the SVG writer, which is what keeps exported paths small and legible.
+
+**Smooth curves are biarc splines, not Béziers.** A curve drawn with the curve tool is a `polyline` with `isSmooth` set: the same points, joined by a tangent-continuous chain of circular arcs (`Biarc`) rather than straight segments. This is deliberate. A cubic Bézier's intersection with another curve has no closed form, so a Bézier primitive could not participate in the boolean solver or be outlined analytically — it would have to be inert, like an imported path. An arc spline looks the same to the eye but is made of arcs the whole pipeline already handles exactly, so a smooth curve unions, subtracts and exports like any other shape. The tangent at each point is estimated from its neighbours (Catmull-Rom style), which is what makes the join continuous across the points and the whole path smooth.
+
+Because a smooth path is just a polyline with a flag, it reuses all the polyline machinery — selection, vertex handles, translation, per-master adjustment — and only its outlining differs. The pen tool makes the straight version; the curve tool makes the smooth one.
 
 **Boolean resolution follows outlining.** Overlapping outlines are combined by a real curve-curve boolean solver, producing minimal, non-overlapping outlines that match what a designer would hand-author. The solver:
 
