@@ -257,16 +257,21 @@ struct SymbolCanvasView: View {
 
         if let hit, document.isEditable(hit.id) {
             if extending {
-                // Toggle this shape's membership, leaving the rest alone.
+                // Toggle this shape's membership, leaving the rest alone, and
+                // arm no move: a shift-click is a pure selection change, so a
+                // stray drag afterwards must not nudge the group.
                 if editor.selection.contains(hit.id) {
                     editor.selection.remove(hit.id)
                 } else {
                     editor.selection.insert(hit.id)
                 }
-            } else if !editor.selection.contains(hit.id) {
-                editor.selectOnly(hit.id)
+                editor.drag = .inert
+            } else {
+                if !editor.selection.contains(hit.id) {
+                    editor.selectOnly(hit.id)
+                }
+                editor.drag = .moving(start: point, current: point)
             }
-            editor.drag = .moving(start: point, current: point)
         } else {
             // Shift keeps the current selection so the marquee adds to it; a
             // plain click on empty space clears it.
@@ -388,6 +393,11 @@ struct SymbolCanvasView: View {
             // An additive marquee unions with what was selected before it
             // began; a plain one replaces.
             editor.selection = additiveMarquee ? marqueeBase.union(picked) : picked
+
+        case .inert:
+            // A shift-click already changed the selection on mouse-down; there
+            // is nothing to finish and no gesture to commit.
+            break
         }
     }
 

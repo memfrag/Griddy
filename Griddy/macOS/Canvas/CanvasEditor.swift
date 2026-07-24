@@ -72,11 +72,18 @@ enum DragOperation {
     /// Rubber-band selecting.
     case marquee(start: IconPoint, current: IconPoint)
 
+    /// A gesture that has already done its work on mouse-down and ignores the
+    /// rest of the drag. A shift-click toggles a shape's selection and arms
+    /// this, so a stray movement afterwards does not move the selection.
+    case inert
+
     var start: IconPoint {
         switch self {
         case .creating(_, let start, _), .moving(let start, _),
              .reshaping(_, _, let start, _), .marquee(let start, _):
             start
+        case .inert:
+            .zero
         }
     }
 
@@ -85,6 +92,8 @@ enum DragOperation {
         case .creating(_, _, let current), .moving(_, let current),
              .reshaping(_, _, _, let current), .marquee(_, let current):
             current
+        case .inert:
+            .zero
         }
     }
 
@@ -112,6 +121,8 @@ enum DragOperation {
             .reshaping(primitiveID: id, handle: handle, start: start, current: point)
         case .marquee(let start, _):
             .marquee(start: start, current: point)
+        case .inert:
+            .inert
         }
     }
 }
