@@ -22,8 +22,38 @@ struct ArtworkLayerRenderer {
         }
 
         drawDragPreview(in: &context)
+        drawPathPreview(in: &context)
         drawSelection(in: &context)
         drawMarquee(in: &context)
+    }
+
+    /// The in-progress pen path: placed points joined by segments, a rubber-band
+    /// segment to the cursor, and a dot on each point. The first dot is drawn
+    /// larger so it is obvious that clicking it closes the path.
+    private func drawPathPreview(in context: inout GraphicsContext) {
+        let points = editor.pathPoints
+        guard editor.tool.isPathTool, !points.isEmpty else {
+            return
+        }
+
+        var line = Path()
+        line.move(to: transform.point(points[0]))
+        for point in points.dropFirst() {
+            line.addLine(to: transform.point(point))
+        }
+        if let cursor = editor.pathCursor {
+            line.addLine(to: transform.point(cursor))
+        }
+        context.stroke(line, with: .color(.artworkPreview),
+                       style: StrokeStyle(lineWidth: 1.5))
+
+        for (index, point) in points.enumerated() {
+            let center = transform.point(point)
+            let size: CGFloat = index == 0 ? 8 : 5
+            let rect = CGRect(x: center.x - size / 2, y: center.y - size / 2,
+                              width: size, height: size)
+            context.fill(Path(ellipseIn: rect), with: .color(.artworkPreview))
+        }
     }
 
     // MARK: Artwork

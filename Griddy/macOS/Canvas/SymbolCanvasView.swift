@@ -66,7 +66,19 @@ struct SymbolCanvasView: View {
             isHovering = hovering
             syncCrosshair()
         }
-        .onChange(of: editor.tool) { _, _ in syncCrosshair() }
+        // The pen's rubber-band segment follows the pointer between clicks.
+        .onContinuousHover { phase in
+            switch phase {
+            case .active(let location) where editor.tool.isPathTool:
+                editor.pathCursor = snapped(transform.iconPoint(location))
+            case .active, .ended:
+                editor.pathCursor = nil
+            }
+        }
+        .onChange(of: editor.tool) { _, _ in
+            syncCrosshair()
+            editor.clearPath()  // switching tools abandons an unfinished path
+        }
         .onDisappear { popCrosshairIfNeeded() }
         // Focusable so the canvas receives key events. Space temporarily or
         // permanently switches to Select while drawing; see spec 8.3.
@@ -74,6 +86,21 @@ struct SymbolCanvasView: View {
         .focusEffectDisabled()
         .focused($isFocused)
         .onKeyPress(.space, phases: [.down, .up, .repeat], action: handleSpace)
+        // Return finishes an open path; Escape abandons it.
+        .onKeyPress(.return) {
+            guard editor.tool.isPathTool, editor.pathPoints.count >= 2 else {
+                return .ignored
+            }
+            finishPath(closed: false)
+            return .handled
+        }
+        .onKeyPress(.escape) {
+            guard editor.tool.isPathTool, !editor.pathPoints.isEmpty else {
+                return .ignored
+            }
+            editor.clearPath()
+            return .handled
+        }
         .onAppear { isFocused = true }
         .onChange(of: document.primitives.count) {
             editor.pruneSelection(against: document)
@@ -233,6 +260,15 @@ struct SymbolCanvasView: View {
         // Interacting with the canvas takes keyboard focus back from the
         // sidebar or inspector, so space works after a click here.
         isFocused = true
+
+        // A path tool builds from discrete clicks; nothing is committed until
+        // the path finishes, so there is no gesture to snapshot and no shape to
+        // preview during the click. The point is placed on release.
+        if editor.tool.isPathTool {
+            editor.drag = .inert
+            return
+        }
+
         gestureSnapshot = file.beginGesture()
 
         // Geometry starts on the grid; hit testing uses the raw point.
@@ -292,6 +328,46 @@ struct SymbolCanvasView: View {
             }
             editor.drag = .marquee(start: point, current: point)
         }
+    }
+
+    // MARK: Path tools (pen)
+
+    /// Places a point, or closes the path if the click lands on its start.
+    ///
+    /// Closing needs at least three points; a two-point "closed" path is just a
+    /// line doubled back on itself.
+    private func addPathPoint(_ point: IconPoint) {
+        if editor.pathPoints.count >= 3,
+           let first = editor.pathPoints.first,
+           first.distance(to: point) <= handleTolerance {
+            finishPath(closed: true)
+            return
+        }
+        editor.pathPoints.append(point)
+    }
+
+    /// Commits the collected points as one primitive, in a single undo step.
+    ///
+    /// The pen makes a polyline; its stroke defaults to round caps and joins,
+    /// so an open path reads as a rounded stroke with no extra setup. A future
+    /// curve tool will branch here to fit arcs instead.
+    private func finishPath(closed: Bool) {
+        defer { editor.clearPath() }
+        guard editor.pathPoints.count >= 2 else {
+            return
+        }
+
+        let primitive = IconPrimitive.polyline(
+            PolylinePrimitive(points: editor.pathPoints, isClosed: closed))
+
+        let snapshot = file.beginGesture()
+        file.updateWithoutUndo { document in
+            document.addPrimitive(primitive)
+        }
+        editor.selectOnly(primitive.id)
+        file.commitGesture("Add \(closed ? "Closed Path" : "Path")",
+                           from: snapshot,
+                           undoManager: undoManager)
     }
 
     /// The handle of the single selected primitive nearest the cursor, if one
@@ -366,6 +442,15 @@ struct SymbolCanvasView: View {
     }
 
     private func endDrag(at point: IconPoint) {
+        // A pen click adds a point to the in-progress path, which is editor
+        // state rather than document state, so it bypasses the drag/undo
+        // machinery entirely.
+        if editor.tool.isPathTool {
+            editor.drag = nil
+            addPathPoint(point)
+            return
+        }
+
         defer {
             editor.drag = nil
             gestureSnapshot = nil

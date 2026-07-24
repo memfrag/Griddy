@@ -30,6 +30,22 @@ final class CanvasEditor {
     /// The gesture currently in progress, if any.
     var drag: DragOperation?
 
+    /// Points placed with a path tool (pen) before the path is committed. A
+    /// path is built from discrete clicks, so these accumulate outside the
+    /// document until the path is finished.
+    var pathPoints: [IconPoint] = []
+
+    /// The live cursor while drawing a path, for the rubber-band segment from
+    /// the last placed point to where the next one would go.
+    var pathCursor: IconPoint?
+
+    /// Discards an in-progress path. Called when finishing, cancelling, or
+    /// switching tools.
+    func clearPath() {
+        pathPoints = []
+        pathCursor = nil
+    }
+
     /// How close a click must be to a centerline to select it, in units.
     /// Scaled by zoom at the call site so it stays a constant on-screen target.
     static let hitToleranceInPoints: Double = 6

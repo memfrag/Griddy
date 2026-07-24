@@ -17,6 +17,7 @@ enum Tool: String, CaseIterable, Identifiable {
     case circle
     case roundedRect
     case capsule
+    case pen
 
     var id: Self { self }
 
@@ -28,6 +29,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .circle: "Circle"
         case .roundedRect: "Rounded Rectangle"
         case .capsule: "Capsule"
+        case .pen: "Pen"
         }
     }
 
@@ -39,6 +41,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .circle: "circle"
         case .roundedRect: "rectangle.roundedtop"
         case .capsule: "capsule"
+        case .pen: "point.topleft.down.to.point.bottomright.curvepath"
         }
     }
 
@@ -50,12 +53,19 @@ enum Tool: String, CaseIterable, Identifiable {
         case .circle: "o"
         case .roundedRect: "r"
         case .capsule: "c"
+        case .pen: "p"
         }
     }
 
     /// Whether this tool creates geometry by dragging.
     var isDrawingTool: Bool {
         self != .select
+    }
+
+    /// Whether this tool builds a path from a series of clicks rather than a
+    /// single drag. Path tools share one point-collecting interaction.
+    var isPathTool: Bool {
+        self == .pen
     }
 
     /// Builds a primitive from a drag.
@@ -113,6 +123,10 @@ enum Tool: String, CaseIterable, Identifiable {
                 return nil
             }
             return .capsule(CapsulePrimitive(bounds: bounds))
+
+        case .pen:
+            // The pen does not build from a single drag; it collects clicks.
+            return nil
         }
     }
 }
