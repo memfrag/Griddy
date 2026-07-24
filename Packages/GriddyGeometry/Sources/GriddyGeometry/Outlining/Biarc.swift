@@ -29,21 +29,29 @@ public enum Biarc {
     public static func fit(through points: [IconPoint],
                            closed: Bool,
                            inSmoothness: [Double] = [],
-                           outSmoothness: [Double] = []) -> [OutlineSegment] {
+                           outSmoothness: [Double] = [],
+                           handles: [CurveHandle?] = []) -> [OutlineSegment] {
         guard points.count >= 2 else {
             return []
         }
 
-        let (outgoing, incoming) = tangents(points, closed: closed,
+        // Every segment is the cubic between two points and their handles,
+        // matched by arcs. A round point has a handle along its tangent; a sharp
+        // one has none, so its side is a straight chord; a free point has an
+        // arbitrary handle. One mechanism covers all three.
+        let (out, incoming) = handleOffsets(points, closed: closed,
                                             inSmoothness: inSmoothness,
-                                            outSmoothness: outSmoothness)
+                                            outSmoothness: outSmoothness,
+                                            handles: handles)
 
         var segments: [OutlineSegment] = []
         let pairCount = closed ? points.count : points.count - 1
         for index in 0..<pairCount {
             let next = (index + 1) % points.count
-            segments.append(contentsOf: biarc(points[index], outgoing[index],
-                                              points[next], incoming[next]))
+            let c0 = points[index].offset(by: out[index])
+            let c1 = points[next].offset(by: incoming[next])
+            segments.append(contentsOf:
+                approximateCubic(points[index], c0, c1, points[next]))
         }
         return segments
     }
@@ -56,55 +64,69 @@ public enum Biarc {
             inSmoothness: smoothness, outSmoothness: smoothness)
     }
 
-    // MARK: Tangents
+    // MARK: Handles
 
-    /// The tangent leaving each point and the tangent arriving at it.
+    /// The control-point offset from each point on its arriving and leaving
+    /// sides — the tangent handles.
     ///
-    /// Smooth points share one tangent (Catmull-Rom, so the join is continuous);
-    /// a sharp point instead aims each side straight at its neighbour, and the
-    /// smoothness blends between the two. Splitting into leaving/arriving is what
-    /// lets a single point be a corner, or be round on one side and sharp on the
-    /// other: its two sides then point different ways.
-    static func tangents(_ points: [IconPoint],
-                         closed: Bool,
-                         inSmoothness: [Double],
-                         outSmoothness: [Double]) -> (out: [IconVector], in: [IconVector]) {
+    /// A free point uses its explicit handles. Otherwise the handle runs along
+    /// the point's smooth (Catmull-Rom) tangent, and its length is the
+    /// smoothness times a third of the adjacent chord: at 1 a full round handle,
+    /// at 0 nothing, so the side runs straight into a corner.
+    public static func handleOffsets(_ points: [IconPoint], closed: Bool,
+                                     inSmoothness: [Double], outSmoothness: [Double],
+                                     handles: [CurveHandle?])
+    -> (out: [IconVector], in: [IconVector]) {
         let count = points.count
         func clamp(_ array: [Double], _ index: Int) -> Double {
             guard index >= 0, index < array.count else { return 1 }
             return min(1, max(0, array[index]))
         }
-        func lerp(_ a: IconVector, _ b: IconVector, _ t: Double) -> IconVector {
-            IconVector(dx: a.dx + (b.dx - a.dx) * t, dy: a.dy + (b.dy - a.dy) * t)
+        func explicit(_ index: Int) -> CurveHandle? {
+            guard index >= 0, index < handles.count else { return nil }
+            return handles[index]
         }
-        let fallback = IconVector(dx: 1, dy: 0)
+        let tangents = catmullTangents(points, closed: closed)
 
-        var outgoing = [IconVector](repeating: fallback, count: count)
-        var incoming = [IconVector](repeating: fallback, count: count)
-
+        var out = [IconVector](repeating: .zero, count: count)
+        var incoming = [IconVector](repeating: .zero, count: count)
         for index in 0..<count {
+            if let handle = explicit(index) {
+                out[index] = handle.outOffset
+                incoming[index] = handle.inOffset
+                continue
+            }
+            let prev = points[(index - 1 + count) % count]
+            let next = points[(index + 1) % count]
+            let chordNext = (closed || index < count - 1)
+                ? points[index].distance(to: next) : 0
+            let chordPrev = (closed || index > 0)
+                ? prev.distance(to: points[index]) : 0
+            let tangent = tangents[index]
+            out[index] = tangent.scaled(by: clamp(outSmoothness, index) * chordNext / 3)
+            incoming[index] = tangent.scaled(by: -clamp(inSmoothness, index) * chordPrev / 3)
+        }
+        return (out, incoming)
+    }
+
+    /// A unit smooth tangent at each point, along the line joining its
+    /// neighbours; at an open end, along its single chord.
+    static func catmullTangents(_ points: [IconPoint],
+                                closed: Bool) -> [IconVector] {
+        let count = points.count
+        let fallback = IconVector(dx: 1, dy: 0)
+        return points.indices.map { index in
             let hasPrev = closed || index > 0
             let hasNext = closed || index < count - 1
             let prev = points[(index - 1 + count) % count]
             let next = points[(index + 1) % count]
-
             let toNext = hasNext ? points[index].vector(to: next).normalized : nil
             let fromPrev = hasPrev ? prev.vector(to: points[index]).normalized : nil
-
-            // The smooth tangent runs neighbour to neighbour; at an open end it
-            // is whatever single chord exists.
-            let catmull = (fromPrev.map { fp in
-                toNext.map { tn in
-                    IconVector(dx: fp.dx + tn.dx, dy: fp.dy + tn.dy).normalized
-                } ?? fp
-            } ?? toNext) ?? fallback
-
-            let outS = clamp(outSmoothness, index)
-            let inS = clamp(inSmoothness, index)
-            outgoing[index] = (lerp(toNext ?? catmull, catmull, outS).normalized) ?? catmull
-            incoming[index] = (lerp(fromPrev ?? catmull, catmull, inS).normalized) ?? catmull
+            if let fp = fromPrev, let tn = toNext {
+                return IconVector(dx: fp.dx + tn.dx, dy: fp.dy + tn.dy).normalized ?? fp
+            }
+            return toNext ?? fromPrev ?? fallback
         }
-        return (outgoing, incoming)
     }
 
     // MARK: Biarc
@@ -206,8 +228,12 @@ public enum Biarc {
                                         _ c1: IconPoint, _ p1: IconPoint,
                                         tolerance: Double = 0.02,
                                         depth: Int = 0) -> [OutlineSegment] {
-        let startTangent = tangentDirection(from: p0, toward: c0, fallback: p1)
-        let endTangent = tangentDirection(from: c1, toward: p1, fallback: p0)
+        // A degenerate handle (control point on its anchor) falls back to the
+        // chord, so a point with no handle on a side runs straight into the
+        // corner there.
+        let chord = p0.vector(to: p1).normalized ?? IconVector(dx: 1, dy: 0)
+        let startTangent = p0.vector(to: c0).normalized ?? chord
+        let endTangent = c1.vector(to: p1).normalized ?? chord
 
         let pieces = biarc(p0, startTangent, p1, endTangent)
 
@@ -223,12 +249,6 @@ public enum Biarc {
                                tolerance: tolerance, depth: depth + 1)
     }
 
-    private static func tangentDirection(from a: IconPoint, toward b: IconPoint,
-                                         fallback: IconPoint) -> IconVector {
-        a.vector(to: b).normalized
-            ?? a.vector(to: fallback).normalized
-            ?? IconVector(dx: 1, dy: 0)
-    }
 
     /// Whether the arcs stay within tolerance of the cubic at sample points.
     private static func fits(_ pieces: [OutlineSegment],

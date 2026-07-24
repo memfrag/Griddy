@@ -283,6 +283,14 @@ struct SymbolCanvasView: View {
         // grabbing the edge of a selected circle resizes it rather than
         // starting a move. Handles are only live for a single selection —
         // reshaping several primitives at once has no obvious meaning.
+        // A free point's tangent-handle ends take priority over its vertex, so
+        // grabbing an arm shapes the curve rather than moving the point.
+        if let arm = freeHandleUnderCursor(at: raw) {
+            editor.drag = .draggingHandle(primitiveID: arm.id, index: arm.index,
+                                          side: arm.side, start: point, current: point)
+            return
+        }
+
         if let grabbed = handleUnderCursor(at: raw) {
             // Option-clicking a smooth-curve vertex toggles it between a rounded
             // point and a sharp corner, rather than starting a reshape.
@@ -336,6 +344,50 @@ struct SymbolCanvasView: View {
                 editor.selection = []
             }
             editor.drag = .marquee(start: point, current: point)
+        }
+    }
+
+    // MARK: Free handles
+
+    /// The tangent-handle arm end of the selected free point nearest the cursor.
+    private func freeHandleUnderCursor(at point: IconPoint)
+    -> (id: PrimitiveID, index: Int, side: CurveSide)? {
+        guard editor.selection.count == 1, let id = editor.selection.first,
+              let index = editor.selectedVertex,
+              case .polyline(let polyline)? = document.primitive(withID: id),
+              let handle = polyline.handle(at: index),
+              polyline.points.indices.contains(index) else {
+            return nil
+        }
+        let anchor = polyline.points[index]
+        let outEnd = anchor.offset(by: handle.outOffset)
+        let inEnd = anchor.offset(by: handle.inOffset)
+        if outEnd.distance(to: point) <= handleTolerance {
+            return (id, index, .outgoing)
+        }
+        if inEnd.distance(to: point) <= handleTolerance {
+            return (id, index, .incoming)
+        }
+        return nil
+    }
+
+    private func dragFreeHandle(_ id: PrimitiveID, index: Int, side: CurveSide,
+                               to point: IconPoint) {
+        file.updateWithoutUndo { document in
+            guard case .polyline(var polyline)? = document.primitive(withID: id),
+                  polyline.points.indices.contains(index) else {
+                return
+            }
+            var handle = polyline.handle(at: index)
+                ?? polyline.derivedHandle(at: index)
+            let anchor = polyline.points[index]
+            let offset = IconVector(dx: point.x - anchor.x, dy: point.y - anchor.y)
+            switch side {
+            case .outgoing: handle.outOffset = offset
+            case .incoming: handle.inOffset = offset
+            }
+            polyline.setHandle(handle, at: index)
+            document.replacePrimitive(.polyline(polyline))
         }
     }
 
@@ -432,6 +484,12 @@ struct SymbolCanvasView: View {
 
     private func updateDrag(to point: IconPoint) {
         guard let drag = editor.drag else {
+            return
+        }
+
+        if case .draggingHandle(let id, let index, let side, _, _) = drag {
+            dragFreeHandle(id, index: index, side: side, to: point)
+            editor.drag = drag.withCurrent(point)
             return
         }
 
@@ -536,6 +594,12 @@ struct SymbolCanvasView: View {
             // An additive marquee unions with what was selected before it
             // began; a plain one replaces.
             editor.selection = additiveMarquee ? marqueeBase.union(picked) : picked
+
+        case .draggingHandle(_, _, _, let start, _):
+            if start.distance(to: point) > 1e-9 {
+                file.commitGesture("Move Handle", from: snapshot,
+                                   undoManager: undoManager)
+            }
 
         case .inert:
             // A shift-click already changed the selection on mouse-down; there

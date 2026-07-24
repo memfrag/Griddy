@@ -64,6 +64,7 @@ public enum Outliner {
                                    isSmooth: polyline.isSmooth,
                                    inSmoothness: polyline.resolvedInSmoothness,
                                    outSmoothness: polyline.resolvedOutSmoothness,
+                                   handles: polyline.resolvedHandles,
                                    width: width,
                                    cap: stroke.lineCap)
 
@@ -419,6 +420,7 @@ public enum Outliner {
                                        isSmooth: Bool = false,
                                        inSmoothness: [Double] = [],
                                        outSmoothness: [Double] = [],
+                                       handles: [CurveHandle?] = [],
                                        width: Double,
                                        cap: LineCap) -> OutlinePath {
         let radius = width / 2
@@ -432,7 +434,8 @@ public enum Outliner {
         return isSmooth
             ? outlineSmoothPath(points: points, isClosed: isClosed,
                                 inSmoothness: inSmoothness,
-                                outSmoothness: outSmoothness, width: width, cap: cap)
+                                outSmoothness: outSmoothness, handles: handles,
+                                width: width, cap: cap)
             : outlineStraightPath(points: points, isClosed: isClosed,
                                   width: width, cap: cap)
     }
@@ -483,12 +486,14 @@ public enum Outliner {
                                           isClosed: Bool,
                                           inSmoothness: [Double],
                                           outSmoothness: [Double],
+                                          handles: [CurveHandle?],
                                           width: Double,
                                           cap: LineCap) -> OutlinePath {
         let radius = width / 2
         let centerline = Biarc.fit(through: points, closed: isClosed,
                                    inSmoothness: inSmoothness,
-                                   outSmoothness: outSmoothness)
+                                   outSmoothness: outSmoothness,
+                                   handles: handles)
         guard !centerline.isEmpty else {
             return outlineStraightPath(points: points, isClosed: isClosed,
                                        width: width, cap: cap)

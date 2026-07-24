@@ -141,6 +141,22 @@ public struct CapsulePrimitive: Codable, Hashable, Sendable, Identifiable {
 }
 
 /// A chain of straight segments through an ordered list of points.
+/// A point's explicit tangent handles, for free-direction curve editing.
+///
+/// Each offset is a control point relative to the point: `outOffset` leaves
+/// along the curve, `inOffset` arrives (pointing back). When a point carries
+/// these, its sides are set directly rather than derived from smoothness — the
+/// free mode. See ``Biarc`` and §10.5.
+public struct CurveHandle: Codable, Hashable, Sendable {
+    public var inOffset: IconVector
+    public var outOffset: IconVector
+
+    public init(inOffset: IconVector, outOffset: IconVector) {
+        self.inOffset = inOffset
+        self.outOffset = outOffset
+    }
+}
+
 public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
 
     public var id: PrimitiveID
@@ -165,13 +181,20 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
     /// the point round on one side and sharp on the other.
     public var pointSmoothnessOut: [Double]
 
+    /// Per-point explicit tangent handles (free mode), parallel to ``points``.
+    /// A non-nil entry overrides the smoothness-derived handles for that point,
+    /// so its two sides can point any direction and length. Empty or nil means
+    /// the point follows its smoothness.
+    public var pointHandles: [CurveHandle?]
+
     public init(id: PrimitiveID = PrimitiveID(),
                 attributes: PrimitiveAttributes = .default,
                 points: [IconPoint],
                 isClosed: Bool = false,
                 isSmooth: Bool = false,
                 pointSmoothness: [Double] = [],
-                pointSmoothnessOut: [Double] = []) {
+                pointSmoothnessOut: [Double] = [],
+                pointHandles: [CurveHandle?] = []) {
         self.id = id
         self.attributes = attributes
         self.points = points
@@ -179,6 +202,47 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
         self.isSmooth = isSmooth
         self.pointSmoothness = pointSmoothness
         self.pointSmoothnessOut = pointSmoothnessOut
+        self.pointHandles = pointHandles
+    }
+
+    /// A point's explicit handle, if it is in free mode.
+    public func handle(at index: Int) -> CurveHandle? {
+        guard index >= 0, index < pointHandles.count else { return nil }
+        return pointHandles[index]
+    }
+
+    public func isFree(at index: Int) -> Bool {
+        handle(at: index) != nil
+    }
+
+    /// The handles for every point, padded with nil so the array matches the
+    /// point count. Passed to ``Biarc``.
+    public var resolvedHandles: [CurveHandle?] {
+        points.indices.map { handle(at: $0) }
+    }
+
+    /// Sets or clears a point's explicit handle. Clearing returns it to
+    /// smoothness-derived (symmetric or per-side).
+    public mutating func setHandle(_ handle: CurveHandle?, at index: Int) {
+        guard points.indices.contains(index) else { return }
+        if pointHandles.count < points.count {
+            pointHandles += Array(repeating: nil,
+                                  count: points.count - pointHandles.count)
+        }
+        pointHandles[index] = handle
+    }
+
+    /// The handle a point would have from its smoothness, for seeding free mode
+    /// so switching to it does not jump the shape.
+    public func derivedHandle(at index: Int) -> CurveHandle {
+        let offsets = Biarc.handleOffsets(points, closed: isClosed,
+                                          inSmoothness: resolvedInSmoothness,
+                                          outSmoothness: resolvedOutSmoothness,
+                                          handles: [])
+        guard points.indices.contains(index) else {
+            return CurveHandle(inOffset: .zero, outOffset: .zero)
+        }
+        return CurveHandle(inOffset: offsets.in[index], outOffset: offsets.out[index])
     }
 
     /// The arriving-side smoothness of one point, defaulting to fully round.
@@ -233,7 +297,7 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
 
     private enum CodingKeys: String, CodingKey {
         case id, attributes, points, isClosed, isSmooth
-        case pointSmoothness, pointSmoothnessOut
+        case pointSmoothness, pointSmoothnessOut, pointHandles
     }
 
     /// Decodes polylines written before the smooth flag, which are straight.
@@ -248,6 +312,8 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
             [Double].self, forKey: .pointSmoothness) ?? []
         pointSmoothnessOut = try container.decodeIfPresent(
             [Double].self, forKey: .pointSmoothnessOut) ?? []
+        pointHandles = try container.decodeIfPresent(
+            [CurveHandle?].self, forKey: .pointHandles) ?? []
     }
 }
 

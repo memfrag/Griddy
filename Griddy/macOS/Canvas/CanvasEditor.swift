@@ -83,6 +83,12 @@ final class CanvasEditor {
     }
 }
 
+/// Which tangent handle of a curve point, the arriving or leaving side.
+enum CurveSide {
+    case incoming
+    case outgoing
+}
+
 /// A gesture in progress.
 enum DragOperation {
 
@@ -99,6 +105,10 @@ enum DragOperation {
     /// Rubber-band selecting.
     case marquee(start: IconPoint, current: IconPoint)
 
+    /// Dragging one free-mode tangent handle of a curve point.
+    case draggingHandle(primitiveID: PrimitiveID, index: Int, side: CurveSide,
+                        start: IconPoint, current: IconPoint)
+
     /// A gesture that has already done its work on mouse-down and ignores the
     /// rest of the drag. A shift-click toggles a shape's selection and arms
     /// this, so a stray movement afterwards does not move the selection.
@@ -107,7 +117,8 @@ enum DragOperation {
     var start: IconPoint {
         switch self {
         case .creating(_, let start, _), .moving(let start, _),
-             .reshaping(_, _, let start, _), .marquee(let start, _):
+             .reshaping(_, _, let start, _), .marquee(let start, _),
+             .draggingHandle(_, _, _, let start, _):
             start
         case .inert:
             .zero
@@ -117,7 +128,8 @@ enum DragOperation {
     var current: IconPoint {
         switch self {
         case .creating(_, _, let current), .moving(_, let current),
-             .reshaping(_, _, _, let current), .marquee(_, let current):
+             .reshaping(_, _, _, let current), .marquee(_, let current),
+             .draggingHandle(_, _, _, _, let current):
             current
         case .inert:
             .zero
@@ -148,6 +160,9 @@ enum DragOperation {
             .reshaping(primitiveID: id, handle: handle, start: start, current: point)
         case .marquee(let start, _):
             .marquee(start: start, current: point)
+        case .draggingHandle(let id, let index, let side, let start, _):
+            .draggingHandle(primitiveID: id, index: index, side: side,
+                            start: start, current: point)
         case .inert:
             .inert
         }

@@ -192,6 +192,8 @@ struct ArtworkLayerRenderer {
             context.stroke(shape, with: .color(.selection), lineWidth: 1)
         }
 
+        drawFreeHandleArms(for: primitive, in: &context)
+
         // Compounds and imported paths have no reshape handles, but their
         // extent is still worth marking while selected.
         if primitive.handles.isEmpty,
@@ -202,6 +204,32 @@ struct ArtworkLayerRenderer {
                                   width: 5, height: 5)
                 context.stroke(Path(rect), with: .color(.selection), lineWidth: 1)
             }
+        }
+    }
+
+    /// Draws the two tangent arms of the selected free-mode curve point, so
+    /// they can be grabbed and dragged. Only the selected point shows them, to
+    /// keep the canvas legible. See spec 10.5.
+    private func drawFreeHandleArms(for primitive: IconPrimitive,
+                                    in context: inout GraphicsContext) {
+        guard case .polyline(let polyline) = primitive,
+              let index = editor.selectedVertex,
+              let handle = polyline.handle(at: index),
+              polyline.points.indices.contains(index) else {
+            return
+        }
+        let anchor = polyline.points[index]
+
+        for offset in [handle.outOffset, handle.inOffset] {
+            let end = anchor.offset(by: offset)
+            var arm = Path()
+            arm.move(to: transform.point(anchor))
+            arm.addLine(to: transform.point(end))
+            context.stroke(arm, with: .color(.handleArm), lineWidth: 1)
+
+            let center = transform.point(end)
+            let rect = CGRect(x: center.x - 3, y: center.y - 3, width: 6, height: 6)
+            context.fill(Path(ellipseIn: rect), with: .color(.selection))
         }
     }
 
@@ -249,6 +277,7 @@ private extension Color {
     static let selection = Color.accentColor
     static let handleFill = Color(nsColor: .windowBackgroundColor)
     static let selectedHandleFill = Color.accentColor
+    static let handleArm = Color.accentColor.opacity(0.6)
 }
 
 // MARK: - Stroke style bridging

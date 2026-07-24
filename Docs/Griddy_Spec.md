@@ -687,6 +687,14 @@ Because a smooth path is just a polyline with a flag, it reuses all the polyline
 
 **Per-point corners.** Each point of a smooth path carries a *smoothness* from 0 to 1 (`pointSmoothness`). At 1 the curve flows through it as a rounded corner (the default); at 0 the point is sharp, because its tangents fall onto the chords and its two arcs collapse to straight lines meeting at a kink; in between it eases. So one path can round some corners and sharpen others without changing tools. Option-clicking a vertex toggles it between rounded and sharp, and a rounded vertex is drawn as a round handle, a sharp one as a square, so the corners are visible at a glance.
 
+**Three point modes.** A point runs in one of three modes, chosen from a picker in the inspector after tapping the point:
+
+- **Symmetric** — one tension, both sides equal (the default).
+- **Per-side** — the arriving and leaving sides carry separate smoothness (`pointSmoothness` and `pointSmoothnessOut`), so a point can be round going in and sharp going out.
+- **Free** — explicit tangent handles (`pointHandles`, a `CurveHandle` per point) dragged on the canvas, any direction and length.
+
+All three feed one geometry. Every segment is the cubic between its two points and their tangent handles; the handle direction is the point's tangent and its length the tension for symmetric and per-side points, or set directly for free points. The cubic is then **matched by arcs** (`Biarc.approximateCubic`) rather than kept as a cubic, so a hand-shaped curve still intersects and exports exactly. Switching a point to free mode seeds its handles from the smoothness-derived shape, so the curve does not jump; the two arms show only for the selected point and drag independently.
+
 **Boolean resolution follows outlining.** Overlapping outlines are combined by a real curve-curve boolean solver, producing minimal, non-overlapping outlines that match what a designer would hand-author. The solver:
 
 1. Computes curve-curve intersections between outline segments.

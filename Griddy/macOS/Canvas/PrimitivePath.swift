@@ -57,7 +57,8 @@ enum PrimitivePath {
                 addCenterline(Biarc.fit(through: polyline.points,
                                         closed: polyline.isClosed,
                                         inSmoothness: polyline.resolvedInSmoothness,
-                                        outSmoothness: polyline.resolvedOutSmoothness),
+                                        outSmoothness: polyline.resolvedOutSmoothness,
+                                        handles: polyline.resolvedHandles),
                               to: &path, transform: transform)
             } else {
                 addPoints(polyline.points,
