@@ -517,10 +517,19 @@ struct SymbolCanvasView: View {
                                from: snapshot,
                                undoManager: undoManager)
 
-        case .reshaping(let id, let handle, _, _):
-            file.commitGesture(reshapeActionName(for: id, handle: handle),
-                               from: snapshot,
-                               undoManager: undoManager)
+        case .reshaping(let id, let handle, let start, _):
+            // Touching a vertex selects it for per-point editing (tension,
+            // corner), whether the touch moved it or was a bare tap.
+            if case .vertex(let index) = handle {
+                editor.selectedVertex = index
+            }
+            // A tap that did not move changed no geometry, so there is nothing
+            // to commit -- committing would leave an empty undo step.
+            if start.distance(to: point) > 1e-9 {
+                file.commitGesture(reshapeActionName(for: id, handle: handle),
+                                   from: snapshot,
+                                   undoManager: undoManager)
+            }
 
         case .marquee:
             let picked = Set(document.rootPrimitives(intersecting: drag.rect).map(\.id))

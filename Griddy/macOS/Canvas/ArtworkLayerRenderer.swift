@@ -179,7 +179,16 @@ struct ArtworkLayerRenderer {
                               height: size)
             let shape = isRoundHandle(handle.handle, of: primitive)
                 ? Path(ellipseIn: rect) : Path(rect)
-            context.fill(shape, with: .color(.handleFill))
+            // The point being edited is filled in the accent colour so it is
+            // clear which one the inspector's tension slider acts on.
+            let isSelectedVertex: Bool = {
+                if case .vertex(let index) = handle.handle {
+                    return editor.selectedVertex == index
+                }
+                return false
+            }()
+            context.fill(shape, with: .color(isSelectedVertex
+                                             ? .selectedHandleFill : .handleFill))
             context.stroke(shape, with: .color(.selection), lineWidth: 1)
         }
 
@@ -239,6 +248,7 @@ private extension Color {
     static let artworkPreview = Color.accentColor.opacity(0.75)
     static let selection = Color.accentColor
     static let handleFill = Color(nsColor: .windowBackgroundColor)
+    static let selectedHandleFill = Color.accentColor
 }
 
 // MARK: - Stroke style bridging

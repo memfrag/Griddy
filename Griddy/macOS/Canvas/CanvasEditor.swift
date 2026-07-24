@@ -24,8 +24,19 @@ final class CanvasEditor {
     /// push is balanced by exactly one pop. Not observed: it mirrors AppKit
     /// state rather than driving the view.
     @ObservationIgnored var crosshairPushed = false
-    var selection: Set<PrimitiveID> = []
+    var selection: Set<PrimitiveID> = [] {
+        didSet {
+            if selection != oldValue {
+                selectedVertex = nil
+            }
+        }
+    }
     var activeWeight: SymbolWeight = .regular
+
+    /// The point of a selected path currently being edited, if any. Set by
+    /// tapping a vertex; used by the inspector to target per-point controls
+    /// (tension, corner). Cleared whenever the selection changes.
+    var selectedVertex: Int?
 
     /// The gesture currently in progress, if any.
     var drag: DragOperation?

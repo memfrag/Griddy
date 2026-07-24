@@ -25,6 +25,10 @@ struct PrimitiveInspector: View {
                 geometryFields
             }
 
+            if case .polyline(let polyline) = primitive, polyline.isSmooth {
+                PointTensionSection(file: file, editor: editor, polyline: polyline)
+            }
+
             ConstraintSection(file: file, editor: editor, primitive: primitive)
 
             // Only for a real primitive, not a compound: a compound's shape is
