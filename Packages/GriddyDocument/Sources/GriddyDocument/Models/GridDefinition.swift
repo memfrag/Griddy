@@ -15,17 +15,28 @@ public struct GridDefinition: Codable, Hashable, Sendable {
     public var primaryInterval: Double
     public var secondaryDivisions: Int
     public var visibleGuides: GuideSet
+
+    /// Whether dragging snaps to the grid at all. Off means fully free.
+    public var snapsToGrid: Bool
+
+    /// How close a point must come to a grid line to snap to it, in units.
+    ///
+    /// Zero or more. At half the snap interval every point snaps, which is the
+    /// familiar always-snap behaviour; smaller values make snapping *magnetic*
+    /// — a point sticks to a line only near it and is free between.
     public var snapTolerance: Double
 
     public init(canvasSize: IconSize,
                 primaryInterval: Double = 1.0,
                 secondaryDivisions: Int = 4,
                 visibleGuides: GuideSet = .default,
+                snapsToGrid: Bool = true,
                 snapTolerance: Double = 0.125) {
         self.canvasSize = canvasSize
         self.primaryInterval = primaryInterval
         self.secondaryDivisions = secondaryDivisions
         self.visibleGuides = visibleGuides
+        self.snapsToGrid = snapsToGrid
         self.snapTolerance = snapTolerance
     }
 
@@ -43,7 +54,7 @@ public struct GridDefinition: Codable, Hashable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case canvasSize, primaryInterval, secondaryDivisions
-        case visibleGuides, snapTolerance
+        case visibleGuides, snapsToGrid, snapTolerance
         case showsPrimaryGrid, showsSecondaryGrid
     }
 
@@ -60,6 +71,9 @@ public struct GridDefinition: Codable, Hashable, Sendable {
         primaryInterval = try container.decode(Double.self, forKey: .primaryInterval)
         secondaryDivisions = try container.decode(Int.self, forKey: .secondaryDivisions)
         snapTolerance = try container.decode(Double.self, forKey: .snapTolerance)
+        // Documents predating the toggle snapped unconditionally.
+        snapsToGrid = try container.decodeIfPresent(
+            Bool.self, forKey: .snapsToGrid) ?? true
 
         if let guides = try container.decodeIfPresent(
             GuideSet.self, forKey: .visibleGuides) {
@@ -83,6 +97,7 @@ public struct GridDefinition: Codable, Hashable, Sendable {
         try container.encode(primaryInterval, forKey: .primaryInterval)
         try container.encode(secondaryDivisions, forKey: .secondaryDivisions)
         try container.encode(visibleGuides, forKey: .visibleGuides)
+        try container.encode(snapsToGrid, forKey: .snapsToGrid)
         try container.encode(snapTolerance, forKey: .snapTolerance)
     }
 
@@ -103,10 +118,11 @@ public struct GridDefinition: Codable, Hashable, Sendable {
     }
 
     /// Snaps a value to the nearest secondary grid line when it lies within
-    /// the snap tolerance, otherwise leaves it alone.
+    /// the snap tolerance, otherwise leaves it alone. Returns it unchanged when
+    /// snapping is turned off.
     public func snapped(_ value: Double) -> Double {
         let interval = secondaryInterval
-        guard interval > .ulpOfOne else {
+        guard snapsToGrid, interval > .ulpOfOne else {
             return value
         }
         let nearest = (value / interval).rounded() * interval

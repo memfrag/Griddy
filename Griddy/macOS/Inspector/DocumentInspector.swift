@@ -15,6 +15,7 @@ struct DocumentInspector: View {
     @ObservedObject var file: SymbolDocumentFile
     @Bindable var editor: CanvasEditor
     let selection: SidebarSelection?
+    @Environment(\.undoManager) private var undoManager
 
     private var document: SymbolDocument {
         file.document
@@ -61,10 +62,29 @@ struct DocumentInspector: View {
                     value: format(document.coordinateSystem.templateMetrics.capHeight))
             }
 
-            Section("Grid") {
-                row("Primary", value: "\(format(document.grid.primaryInterval)) u")
-                row("Secondary", value: "\(format(document.grid.secondaryInterval)) u")
-                row("Snap", value: "\(format(document.grid.snapTolerance)) u")
+            Section("Grid & Snapping") {
+                Toggle("Snap to grid", isOn: snapsToGridBinding)
+
+                Stepper(value: subdivisionsBinding, in: 1...16) {
+                    LabeledContent("Subdivisions") {
+                        Text("\(document.grid.secondaryDivisions)")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                }
+                .disabled(!document.grid.snapsToGrid)
+
+                row("Snap step", value: "\(format(document.grid.secondaryInterval)) u")
+
+                LabeledContent("Snap distance") {
+                    TextField("Distance", value: snapDistanceBinding,
+                              format: .number.precision(.fractionLength(0...3)))
+                        .labelsHidden()
+                        .multilineTextAlignment(.trailing)
+                        .monospacedDigit()
+                        .frame(width: 72)
+                }
+                .disabled(!document.grid.snapsToGrid)
             }
 
             MarginSection(file: file, editor: editor)
@@ -91,6 +111,51 @@ struct DocumentInspector: View {
             Text(value)
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
+        }
+    }
+
+    // MARK: Grid bindings
+
+    private var snapsToGridBinding: Binding<Bool> {
+        gridBinding(\.snapsToGrid, name: "Toggle Snapping")
+    }
+
+    private var subdivisionsBinding: Binding<Int> {
+        Binding(
+            get: { document.grid.secondaryDivisions },
+            set: { newValue in
+                editGrid("Change Subdivisions") {
+                    $0.secondaryDivisions = max(1, newValue)
+                }
+            }
+        )
+    }
+
+    private var snapDistanceBinding: Binding<Double> {
+        Binding(
+            get: { document.grid.snapTolerance },
+            set: { newValue in
+                editGrid("Change Snap Distance") {
+                    $0.snapTolerance = max(0, newValue)
+                }
+            }
+        )
+    }
+
+    private func gridBinding(_ keyPath: WritableKeyPath<GridDefinition, Bool>,
+                            name: String) -> Binding<Bool> {
+        Binding(
+            get: { document.grid[keyPath: keyPath] },
+            set: { newValue in
+                editGrid(name) { $0[keyPath: keyPath] = newValue }
+            }
+        )
+    }
+
+    private func editGrid(_ name: String,
+                          _ mutate: @escaping (inout GridDefinition) -> Void) {
+        file.perform(name, undoManager: undoManager) { document in
+            mutate(&document.grid)
         }
     }
 

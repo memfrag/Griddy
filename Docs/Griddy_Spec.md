@@ -434,8 +434,8 @@ struct GridDefinition: Codable, Equatable {
     var canvasSize: CGSizeCodable
     var primaryInterval: Double
     var secondaryDivisions: Int
-    var showsPrimaryGrid: Bool
-    var showsSecondaryGrid: Bool
+    var visibleGuides: GuideSet    // which construction guides show (§9.2)
+    var snapsToGrid: Bool          // whether dragging snaps at all
     var snapTolerance: Double
 }
 ```
@@ -447,8 +447,11 @@ An earlier revision carried a `safeArea` field — an inset of the margin box, d
 ```text
 primaryInterval    1.0u        (16 rows between baseline and capline)
 secondaryDivisions 4           (0.25u snap increments)
+snapsToGrid        true
 snapTolerance      0.125u
 ```
+
+**Snapping is configurable** from the Grid & Snapping inspector: a toggle turns it off entirely, `secondaryDivisions` sets how fine the snap grid is (the snap step is `primaryInterval / secondaryDivisions`), and `snapTolerance` sets how magnetic it is. At half the snap step every point snaps — the familiar always-snap behaviour; smaller values make a point stick to a grid line only near it and stay free between. Handle-dragging and shape-dragging both go through the same snap, so it applies uniformly.
 
 ### 9.3 Key Shapes
 
