@@ -195,11 +195,10 @@ struct SymbolCanvasView: View {
     private var dragGesture: some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                let point = snapped(transform.iconPoint(value.location))
                 if editor.drag == nil {
-                    beginDrag(at: snapped(transform.iconPoint(value.startLocation)))
+                    beginDrag(atRaw: transform.iconPoint(value.startLocation))
                 }
-                updateDrag(to: point)
+                updateDrag(to: snapped(transform.iconPoint(value.location)))
             }
             .onEnded { value in
                 endDrag(at: snapped(transform.iconPoint(value.location)))
@@ -222,11 +221,22 @@ struct SymbolCanvasView: View {
         }
     }
 
-    private func beginDrag(at point: IconPoint) {
+    /// Begins a gesture.
+    ///
+    /// - Parameter raw: the cursor in unit space, *not* snapped to the grid.
+    ///   Hit testing uses this raw point so a handle or shape can be grabbed
+    ///   wherever it actually is; snapping applies to the drag's result, not to
+    ///   deciding what was clicked. Snapping the click first made small targets
+    ///   like a line's endpoints nearly ungrabbable, because the click rounded
+    ///   to the nearest grid point before the handle test ran.
+    private func beginDrag(atRaw raw: IconPoint) {
         // Interacting with the canvas takes keyboard focus back from the
         // sidebar or inspector, so space works after a click here.
         isFocused = true
         gestureSnapshot = file.beginGesture()
+
+        // Geometry starts on the grid; hit testing uses the raw point.
+        let point = snapped(raw)
 
         if editor.tool.isDrawingTool {
             editor.drag = .creating(tool: editor.tool, start: point, current: point)
@@ -237,7 +247,7 @@ struct SymbolCanvasView: View {
         // grabbing the edge of a selected circle resizes it rather than
         // starting a move. Handles are only live for a single selection —
         // reshaping several primitives at once has no obvious meaning.
-        if let grabbed = handleUnderCursor(at: point) {
+        if let grabbed = handleUnderCursor(at: raw) {
             editor.drag = .reshaping(primitiveID: grabbed.id,
                                      handle: grabbed.handle,
                                      start: point, current: point)
@@ -247,7 +257,7 @@ struct SymbolCanvasView: View {
         // Roots only, and compound-aware: hit testing the flat list would find
         // a compound's children, which are still in the document but no longer
         // drawn, so clicking a combined shape would select an invisible operand.
-        let hit = document.topmostPrimitive(at: point, tolerance: hitTolerance)
+        let hit = document.topmostPrimitive(at: raw, tolerance: hitTolerance)
 
         // Shift extends the selection rather than replacing it — click shapes
         // to add or remove them one at a time, or shift-drag a marquee to add
