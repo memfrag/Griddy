@@ -103,7 +103,16 @@ struct PointTensionSection: View {
     // MARK: Editing
 
     private func modeBinding(_ index: Int) -> Binding<Mode> {
-        Binding(get: { mode(at: index) }, set: { setMode($0, at: index) })
+        Binding(
+            get: { mode(at: index) },
+            set: { newMode in
+                // A segmented picker sets its binding during a view update, and
+                // `perform` publishes the document change synchronously, which
+                // SwiftUI forbids mid-update. Applying it on the next tick moves
+                // the mutation out of the update cycle.
+                Task { @MainActor in setMode(newMode, at: index) }
+            }
+        )
     }
 
     private func setMode(_ mode: Mode, at index: Int) {
