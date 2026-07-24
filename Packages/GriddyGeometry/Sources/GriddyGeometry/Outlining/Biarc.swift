@@ -176,4 +176,79 @@ public enum Biarc {
         let dot = ab.dx * bc.dx + ab.dy * bc.dy
         return abs(cross) < 1e-9 && dot > 0
     }
+
+    // MARK: Cubic approximation
+
+    /// Approximates a cubic Bézier with a chain of circular arcs.
+    ///
+    /// This is how free tangent handles stay arc-based: the handles define a
+    /// cubic, and the cubic is matched by arcs to a tolerance rather than kept
+    /// as a cubic the boolean solver could not intersect. A biarc is fitted to
+    /// the cubic's endpoints and end tangents; where it strays too far the cubic
+    /// is split in half and each half fitted, recursively, so curvature gets as
+    /// many arcs as it needs and a gentle curve gets few.
+    public static func approximateCubic(_ p0: IconPoint, _ c0: IconPoint,
+                                        _ c1: IconPoint, _ p1: IconPoint,
+                                        tolerance: Double = 0.02,
+                                        depth: Int = 0) -> [OutlineSegment] {
+        let startTangent = tangentDirection(from: p0, toward: c0, fallback: p1)
+        let endTangent = tangentDirection(from: c1, toward: p1, fallback: p0)
+
+        let pieces = biarc(p0, startTangent, p1, endTangent)
+
+        // Deep enough, or the biarc already tracks the cubic: accept it.
+        if depth >= 8 || fits(pieces, cubic: (p0, c0, c1, p1), tolerance: tolerance) {
+            return pieces
+        }
+
+        let (left, right) = splitCubic(p0, c0, c1, p1)
+        return approximateCubic(left.0, left.1, left.2, left.3,
+                                tolerance: tolerance, depth: depth + 1)
+            + approximateCubic(right.0, right.1, right.2, right.3,
+                               tolerance: tolerance, depth: depth + 1)
+    }
+
+    private static func tangentDirection(from a: IconPoint, toward b: IconPoint,
+                                         fallback: IconPoint) -> IconVector {
+        a.vector(to: b).normalized
+            ?? a.vector(to: fallback).normalized
+            ?? IconVector(dx: 1, dy: 0)
+    }
+
+    /// Whether the arcs stay within tolerance of the cubic at sample points.
+    private static func fits(_ pieces: [OutlineSegment],
+                             cubic: (IconPoint, IconPoint, IconPoint, IconPoint),
+                             tolerance: Double) -> Bool {
+        for step in 1...3 {
+            let t = Double(step) / 4
+            let point = cubicPoint(cubic.0, cubic.1, cubic.2, cubic.3, at: t)
+            let nearest = pieces.map { $0.distance(to: point) }.min() ?? .infinity
+            if nearest > tolerance {
+                return false
+            }
+        }
+        return true
+    }
+
+    static func cubicPoint(_ p0: IconPoint, _ c0: IconPoint, _ c1: IconPoint,
+                           _ p1: IconPoint, at t: Double) -> IconPoint {
+        let u = 1 - t
+        let a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t
+        return IconPoint(x: a * p0.x + b * c0.x + c * c1.x + d * p1.x,
+                         y: a * p0.y + b * c0.y + c * c1.y + d * p1.y)
+    }
+
+    /// Splits a cubic at its midpoint (de Casteljau).
+    private static func splitCubic(_ p0: IconPoint, _ c0: IconPoint,
+                                   _ c1: IconPoint, _ p1: IconPoint)
+    -> (left: (IconPoint, IconPoint, IconPoint, IconPoint),
+        right: (IconPoint, IconPoint, IconPoint, IconPoint)) {
+        func mid(_ a: IconPoint, _ b: IconPoint) -> IconPoint {
+            IconPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
+        }
+        let a = mid(p0, c0), b = mid(c0, c1), e = mid(c1, p1)
+        let d = mid(a, b), f = mid(b, e)
+        let g = mid(d, f)
+        return ((p0, a, d, g), (g, f, e, p1))
+    }
 }
