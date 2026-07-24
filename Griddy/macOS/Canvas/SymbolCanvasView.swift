@@ -27,6 +27,11 @@ struct SymbolCanvasView: View {
     /// Whether the pointer is over the canvas, for the crosshair cursor.
     @State private var isHovering = false
 
+    /// The selection a shift-marquee adds to, captured when the drag begins so
+    /// it is not disturbed while the rubber band sweeps.
+    @State private var additiveMarquee = false
+    @State private var marqueeBase: Set<PrimitiveID> = []
+
     private var document: SymbolDocument {
         file.document
     }
@@ -244,13 +249,32 @@ struct SymbolCanvasView: View {
         // drawn, so clicking a combined shape would select an invisible operand.
         let hit = document.topmostPrimitive(at: point, tolerance: hitTolerance)
 
+        // Shift extends the selection rather than replacing it — click shapes
+        // to add or remove them one at a time, or shift-drag a marquee to add
+        // a group. The modifier is read from AppKit because a SwiftUI
+        // DragGesture value does not carry it.
+        let extending = NSEvent.modifierFlags.contains(.shift)
+
         if let hit, document.isEditable(hit.id) {
-            if !editor.selection.contains(hit.id) {
+            if extending {
+                // Toggle this shape's membership, leaving the rest alone.
+                if editor.selection.contains(hit.id) {
+                    editor.selection.remove(hit.id)
+                } else {
+                    editor.selection.insert(hit.id)
+                }
+            } else if !editor.selection.contains(hit.id) {
                 editor.selectOnly(hit.id)
             }
             editor.drag = .moving(start: point, current: point)
         } else {
-            editor.selection = []
+            // Shift keeps the current selection so the marquee adds to it; a
+            // plain click on empty space clears it.
+            additiveMarquee = extending
+            marqueeBase = extending ? editor.selection : []
+            if !extending {
+                editor.selection = []
+            }
             editor.drag = .marquee(start: point, current: point)
         }
     }
@@ -360,8 +384,10 @@ struct SymbolCanvasView: View {
                                undoManager: undoManager)
 
         case .marquee:
-            let picked = document.rootPrimitives(intersecting: drag.rect)
-            editor.selection = Set(picked.map(\.id))
+            let picked = Set(document.rootPrimitives(intersecting: drag.rect).map(\.id))
+            // An additive marquee unions with what was selected before it
+            // began; a plain one replaces.
+            editor.selection = additiveMarquee ? marqueeBase.union(picked) : picked
         }
     }
 
