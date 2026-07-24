@@ -40,8 +40,16 @@ public struct GuideSet: OptionSet, Codable, Hashable, Sendable {
     /// The template's left and right margins: the real bound on artwork width.
     public static let margins = GuideSet(rawValue: 1 << 5)
 
+    /// A vertical and a horizontal line through the symbol centre — the
+    /// midpoint between the margins, at cap-height centre.
+    public static let centerLines = GuideSet(rawValue: 1 << 6)
+
+    /// Two diagonals crossing at the symbol centre.
+    public static let diagonals = GuideSet(rawValue: 1 << 7)
+
     public static let all: GuideSet = [
-        .primaryGrid, .secondaryGrid, .keyShapes, .baseline, .margins
+        .primaryGrid, .secondaryGrid, .keyShapes, .baseline, .margins,
+        .centerLines, .diagonals
     ]
 
     /// What a new document shows.
@@ -61,6 +69,8 @@ public extension GuideSet {
         (.secondaryGrid, "Subdivisions"),
         (.baseline, "Baseline and Capline"),
         (.margins, "Margins"),
+        (.centerLines, "Center Lines"),
+        (.diagonals, "Diagonals"),
         (.keyShapes, "Key Shapes")
     ]
 

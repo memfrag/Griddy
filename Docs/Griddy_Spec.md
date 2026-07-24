@@ -247,6 +247,7 @@ The canvas has three conceptual layers:
 - Margins.
 - Baseline.
 - Alignment guides.
+- Centre lines and diagonals through the symbol centre.
 - Key shapes.
 - Symmetry axes.
 - Measurements.
@@ -505,6 +506,8 @@ enum SymbolDesignIntent: String, Codable {
 ```
 
 The canvas should emphasize the corresponding key shape and compare artwork occupancy against it.
+
+**Key shapes centre on the symbol centre.** They are a target the artwork is meant to fill, so they are drawn centred on the midpoint between the active weight's margins (horizontally) and the cap-height centre (vertically) — the point a symmetric symbol balances around. Their stored bounds centre on the design area rather than the cap-height box, since the cap-height box is the *template's* advance centre and drifts to one side once the margins move; the canvas re-centres them on the live symbol centre when drawing. The optional **centre lines** and **diagonals** guides (§9.2) mark the same centre, so a designer can align artwork to it directly.
 
 ### 9.5 Glyph Metrics and Margins
 

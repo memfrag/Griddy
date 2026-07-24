@@ -31,7 +31,7 @@ struct GuideSetTests {
             $0.insert($1.guide)
         }
         #expect(listed == .all)
-        #expect(GuideSet.ordered.count == 5)
+        #expect(GuideSet.ordered.count == 7)
     }
 
     @Test("The grid flags still read and write through to the set")

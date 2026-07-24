@@ -90,8 +90,14 @@ public struct KeyShapeSet: Codable, Hashable, Sendable {
     ///   Apple symbols, in the same pass that resolves the scale compensation
     ///   factors in spec 12.4.
     public static func `default`(for coordinateSystem: CoordinateSystem) -> KeyShapeSet {
-        let canvas = coordinateSystem.capHeightBox
-        let center = canvas.center
+        // Centred on the design area, not the cap-height box: the cap-height
+        // box is the *template's* advance centre, which drifts to one side once
+        // the margins move. The design-area centre is the stable canvas centre
+        // and matches where the artwork of a symmetric symbol sits. The canvas
+        // re-centres these on the live symbol centre when drawing; this is the
+        // stored fallback that the on-key-shape constraint reads.
+        let center = IconPoint(x: coordinateSystem.designArea.center.x,
+                               y: coordinateSystem.capHeightBox.center.y)
 
         func centered(width: Double, height: Double) -> IconRect {
             IconRect(x: center.x - width / 2,

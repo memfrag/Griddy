@@ -61,4 +61,9 @@ public struct IconRect: Codable, Hashable, Sendable {
                         width: width,
                         height: height)
     }
+
+    /// The rectangle translated by an offset, keeping its size.
+    public func offsetBy(dx: Double, dy: Double) -> IconRect {
+        IconRect(x: minX + dx, y: minY + dy, width: size.width, height: size.height)
+    }
 }
