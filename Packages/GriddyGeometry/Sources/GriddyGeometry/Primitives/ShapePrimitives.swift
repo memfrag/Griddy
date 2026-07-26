@@ -141,6 +141,18 @@ public struct CapsulePrimitive: Codable, Hashable, Sendable, Identifiable {
 }
 
 /// A chain of straight segments through an ordered list of points.
+/// How a curve point's two sides are controlled. Stored explicitly rather than
+/// inferred, so a per-side point stays per-side even while its two sides happen
+/// to hold equal values.
+public enum CurvePointMode: String, Codable, Hashable, Sendable {
+    /// One tension, both sides equal.
+    case symmetric
+    /// Arriving and leaving sides set independently.
+    case perSide
+    /// Explicit tangent handles, any direction and length.
+    case free
+}
+
 /// A point's explicit tangent handles, for free-direction curve editing.
 ///
 /// Each offset is a control point relative to the point: `outOffset` leaves
@@ -187,6 +199,9 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
     /// the point follows its smoothness.
     public var pointHandles: [CurveHandle?]
 
+    /// Per-point mode, parallel to ``points``. Empty or short means symmetric.
+    public var pointModes: [CurvePointMode]
+
     public init(id: PrimitiveID = PrimitiveID(),
                 attributes: PrimitiveAttributes = .default,
                 points: [IconPoint],
@@ -194,7 +209,8 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
                 isSmooth: Bool = false,
                 pointSmoothness: [Double] = [],
                 pointSmoothnessOut: [Double] = [],
-                pointHandles: [CurveHandle?] = []) {
+                pointHandles: [CurveHandle?] = [],
+                pointModes: [CurvePointMode] = []) {
         self.id = id
         self.attributes = attributes
         self.points = points
@@ -203,16 +219,33 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
         self.pointSmoothness = pointSmoothness
         self.pointSmoothnessOut = pointSmoothnessOut
         self.pointHandles = pointHandles
+        self.pointModes = pointModes
+    }
+
+    /// A point's mode, defaulting to symmetric.
+    public func mode(at index: Int) -> CurvePointMode {
+        guard index >= 0, index < pointModes.count else { return .symmetric }
+        return pointModes[index]
+    }
+
+    public mutating func setMode(_ mode: CurvePointMode, at index: Int) {
+        guard points.indices.contains(index) else { return }
+        if pointModes.count < points.count {
+            pointModes += Array(repeating: .symmetric,
+                                count: points.count - pointModes.count)
+        }
+        pointModes[index] = mode
     }
 
     /// A point's explicit handle, if it is in free mode.
     public func handle(at index: Int) -> CurveHandle? {
-        guard index >= 0, index < pointHandles.count else { return nil }
+        guard mode(at: index) == .free,
+              index >= 0, index < pointHandles.count else { return nil }
         return pointHandles[index]
     }
 
     public func isFree(at index: Int) -> Bool {
-        handle(at: index) != nil
+        mode(at: index) == .free
     }
 
     /// The handles for every point, padded with nil so the array matches the
@@ -251,10 +284,11 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
         return pointSmoothness[index]
     }
 
-    /// The leaving-side smoothness, falling back to the arriving side so an
-    /// un-split point stays symmetric.
+    /// The leaving-side smoothness. Only a per-side point reads its own value;
+    /// otherwise both sides follow the arriving side.
     public func smoothnessOut(at index: Int) -> Double {
-        guard index >= 0, index < pointSmoothnessOut.count else {
+        guard mode(at: index) == .perSide,
+              index >= 0, index < pointSmoothnessOut.count else {
             return smoothness(at: index)
         }
         return pointSmoothnessOut[index]
@@ -262,8 +296,7 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
 
     /// Whether a point's two sides are set independently.
     public func isPerSide(at index: Int) -> Bool {
-        index >= 0 && index < pointSmoothnessOut.count
-            && abs(pointSmoothnessOut[index] - smoothness(at: index)) > 1e-9
+        mode(at: index) == .perSide
     }
 
     public var resolvedInSmoothness: [Double] {
@@ -297,7 +330,7 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
 
     private enum CodingKeys: String, CodingKey {
         case id, attributes, points, isClosed, isSmooth
-        case pointSmoothness, pointSmoothnessOut, pointHandles
+        case pointSmoothness, pointSmoothnessOut, pointHandles, pointModes
     }
 
     /// Decodes polylines written before the smooth flag, which are straight.
@@ -314,6 +347,8 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
             [Double].self, forKey: .pointSmoothnessOut) ?? []
         pointHandles = try container.decodeIfPresent(
             [CurveHandle?].self, forKey: .pointHandles) ?? []
+        pointModes = try container.decodeIfPresent(
+            [CurvePointMode].self, forKey: .pointModes) ?? []
     }
 }
 

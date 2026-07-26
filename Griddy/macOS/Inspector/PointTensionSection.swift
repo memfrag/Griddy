@@ -119,14 +119,20 @@ struct PointTensionSection: View {
         edit("Change Point Mode") { polyline in
             switch mode {
             case .symmetric:
-                polyline.setHandle(nil, at: index)
+                polyline.setMode(.symmetric, at: index)
                 polyline.setSmoothness(polyline.smoothness(at: index), at: index)
             case .perSide:
-                polyline.setHandle(nil, at: index)
-                // Leave in/out as they are; the sliders now edit them apart.
+                // Seed the leaving side from the current value, then let the two
+                // sliders edit them apart. The mode is stored, so the point
+                // stays per-side even while the values match.
+                polyline.setSmoothness(in: polyline.smoothness(at: index),
+                                       out: polyline.smoothness(at: index),
+                                       at: index)
+                polyline.setMode(.perSide, at: index)
             case .free:
                 // Seed the handle from the current shape so it does not jump.
                 polyline.setHandle(polyline.derivedHandle(at: index), at: index)
+                polyline.setMode(.free, at: index)
             }
         }
     }
