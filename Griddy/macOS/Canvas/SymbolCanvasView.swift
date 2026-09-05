@@ -86,7 +86,8 @@ struct SymbolCanvasView: View {
         .focusEffectDisabled()
         .focused($isFocused)
         .onKeyPress(.space, phases: [.down, .up, .repeat], action: handleSpace)
-        // Return finishes an open path; Escape abandons it.
+        // Return finishes an open path. Escape backs out one point at a time,
+        // and only abandons the whole path once the last point is gone.
         .onKeyPress(.return) {
             guard editor.tool.isPathTool, editor.pathPoints.count >= 2 else {
                 return .ignored
@@ -98,7 +99,7 @@ struct SymbolCanvasView: View {
             guard editor.tool.isPathTool, !editor.pathPoints.isEmpty else {
                 return .ignored
             }
-            editor.clearPath()
+            editor.removeLastPathPoint()
             return .handled
         }
         .onAppear { isFocused = true }

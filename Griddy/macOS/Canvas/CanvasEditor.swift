@@ -57,6 +57,15 @@ final class CanvasEditor {
         pathCursor = nil
     }
 
+    /// Removes the last placed point of an in-progress path, stepping back one
+    /// click at a time. Returns false when there was nothing to remove.
+    @discardableResult
+    func removeLastPathPoint() -> Bool {
+        guard !pathPoints.isEmpty else { return false }
+        pathPoints.removeLast()
+        return true
+    }
+
     /// How close a click must be to a centerline to select it, in units.
     /// Scaled by zoom at the call site so it stays a constant on-screen target.
     static let hitToleranceInPoints: Double = 6

@@ -278,6 +278,11 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
         return CurveHandle(inOffset: offsets.in[index], outOffset: offsets.out[index])
     }
 
+    /// The largest tension a point may carry. 1 is an ordinary smooth curve
+    /// (handle a third of the chord); values above it push the handle out
+    /// further so the point bulges rounder than a plain circular blend.
+    public static let maxSmoothness: Double = 2
+
     /// The arriving-side smoothness of one point, defaulting to fully round.
     public func smoothness(at index: Int) -> Double {
         guard index >= 0, index < pointSmoothness.count else { return 1 }
@@ -324,8 +329,8 @@ public struct PolylinePrimitive: Codable, Hashable, Sendable, Identifiable {
             pointSmoothnessOut += Array(repeating: 1,
                                         count: count - pointSmoothnessOut.count)
         }
-        pointSmoothness[index] = min(1, max(0, inValue))
-        pointSmoothnessOut[index] = min(1, max(0, outValue))
+        pointSmoothness[index] = min(Self.maxSmoothness, max(0, inValue))
+        pointSmoothnessOut[index] = min(Self.maxSmoothness, max(0, outValue))
     }
 
     private enum CodingKeys: String, CodingKey {

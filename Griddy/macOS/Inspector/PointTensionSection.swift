@@ -95,7 +95,8 @@ struct PointTensionSection: View {
     private func tensionSlider(_ label: String, value: Double,
                                set: @escaping (Double) -> Void) -> some View {
         LabeledContent(label) {
-            Slider(value: Binding(get: { value }, set: set), in: 0...1)
+            Slider(value: Binding(get: { value }, set: set),
+                   in: 0...PolylinePrimitive.maxSmoothness)
                 .frame(width: 120)
         }
     }
